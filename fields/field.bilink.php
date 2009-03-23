@@ -43,6 +43,51 @@
 			return true;
 		}
 		
+		public function entryDataCleanup($entry_id, $data = null) {
+			$entryManager = new EntryManager($this->_engine);
+			$field_id = $this->get('id');
+			$entries = $this->_engine->Database->fetchCol('linked_entry_id',
+				sprintf("
+					SELECT
+						f.linked_entry_id
+					FROM
+						`tbl_entries_data_{$field_id}` AS f
+					WHERE
+						f.entry_id = '{$entry_id}'
+				")
+			);
+			
+			foreach ($entries as $linked_entry_id) {
+				if (is_null($linked_entry_id)) continue;
+				
+				$entry = @current($entryManager->fetch($linked_entry_id, $this->get('linked_section_id')));
+				
+				if (!is_object($entry)) continue;
+				
+				$values = $entry->getData($this->get('linked_field_id'));
+				
+				if (array_key_exists(linked_entry_id, $values)) {
+					$values = $values['linked_entry_id'];
+				}
+				
+				if (is_null($values)) {
+					$values = array();
+					
+				} else if (!is_array($values)) {
+					$values = array($values);
+				}
+				
+				$values = array_diff($values, array($entry_id));
+				
+				$entry->setData($this->get('linked_field_id'), array(
+					'linked_entry_id'	=> $values
+				));
+				$entry->commit();
+			}
+			
+			return parent::entryDataCleanup($entry_id, $data);
+		}
+		
 	/*-------------------------------------------------------------------------
 		Utilities:
 	-------------------------------------------------------------------------*/
