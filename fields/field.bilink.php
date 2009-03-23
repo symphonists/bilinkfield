@@ -12,9 +12,9 @@
 		public function __construct(&$parent) {
 			parent::__construct($parent);
 			
-			$this->_name = 'Bi Link';
+			$this->_name = 'Bi-Link';
 			$this->_required = true;
-			$this->_driver = $this->_engine->ExtensionManager->create('subsectionfield');
+			$this->_driver = $this->_engine->ExtensionManager->create('bilinkfield');
 			
 			// Set defaults:
 			$this->set('show_column', 'yes');
@@ -25,9 +25,9 @@
 			
 			return $this->_engine->Database->query("
 				CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$field_id}` (
-					`id` int(11) unsigned NOT NULL auto_increment,
-					`entry_id` int(11) unsigned NOT NULL,
-					`linked_entry_id` int(11) unsigned default NULL,
+					`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+					`entry_id` INT(11) UNSIGNED NOT NULL,
+					`linked_entry_id` INT(11) UNSIGNED DEFAULT NULL,
 					PRIMARY KEY (`id`),
 					KEY `entry_id` (`entry_id`),
 					KEY `linked_entry_id` (`linked_entry_id`)
@@ -236,22 +236,18 @@
 	-------------------------------------------------------------------------*/
 		
 		public function findEntries($entry_ids) {
+			$sectionManager = new SectionManager($this->_engine);
+			$section = $sectionManager->fetch($this->get('linked_section_id'));
 			$entryManager = new EntryManager($this->_engine);
 			$entries = $entryManager->fetch(null, $this->get('linked_section_id'));
 			$options = array();
 			
 			if ($this->get('required') != 'yes') $options[] = array(null, false, null);
 			
-			if (empty($entries)) return $options;
-			
-			header('content-type: text/plain');
+			if (!is_object($section) or empty($entries)) return $options;
 			
 			foreach ($entries as $order => $entry) {
 				if (!is_object($entry)) continue;
-				
-				$section = $entry->getSection();
-				
-				if (!is_object($section)) continue;
 				
 				$field = current($section->fetchVisibleColumns());
 				
@@ -272,9 +268,9 @@
 		}
 		
 		public function displayPublishPanel(&$wrapper, $data = null, $error = null, $prefix = null, $postfix = null) {
-			$handle = $this->get('element_name');
+			$handle = $this->get('element_name'); $entry_ids = array();
 			
-			if (!is_array($data['linked_entry_id'])) {
+			if (!is_array($data['linked_entry_id']) and !is_null($data['linked_entry_id'])) {
 				$entry_ids = array($data['linked_entry_id']);
 				
 			} else {
@@ -322,10 +318,6 @@
 			}
 			
 			// Update linked field:
-			// TODO: Delete relations when entries are deselected.
-			header('content-type: text/plain');
-			//var_dump($entry_id);
-			
 			$remove = $this->_engine->Database->fetchCol('linked_entry_id',
 				sprintf("
 					SELECT
@@ -352,18 +344,23 @@
 					
 					$values = $entry->getData($this->get('linked_field_id'));
 					
-					if (isset($values['linked_entry_id'])) $values = $values['linked_entry_id'];
+					if (array_key_exists(linked_entry_id, $values)) {
+						$values = $values['linked_entry_id'];
+					}
 					
-					if (!is_array($values)) $values = array($values);
+					if (is_null($values)) {
+						$values = array();
+					
+					} else if (!is_array($values)) {
+						$values = array($values);
+					}
 					
 					$values = array_diff($values, array($entry_id));
 					
-					//var_dump($values);
-					
-					//$entry->setData($this->get('linked_field_id'), array(
-					//	'linked_entry_id'	=> $values
-					//));
-					//$entry->commit();
+					$entry->setData($this->get('linked_field_id'), array(
+						'linked_entry_id'	=> $values
+					));
+					$entry->commit();
 				}
 				
 				// Link new entries:
@@ -376,35 +373,289 @@
 					
 					$values = $entry->getData($this->get('linked_field_id'));
 					
-					//if (isset($values['linked_entry_id'])) $values = $values['linked_entry_id'];
-					
-					//if (!is_array($values)) $values = array($values);
-					
-					var_dump($values);
-					
-					continue;
-					
-					if (!is_array($values)) {
-						$values = array(
-							'linked_entry_id'	=> $entry_id
-						);
-						
-					} else if (!in_array($entry_id, $values)) {
-						$values['linked_entry_id'][] = $entry_id;
+					if (array_key_exists(linked_entry_id, $values)) {
+						$values = $values['linked_entry_id'];
 					}
 					
-					if (is_array($remove)) $values = array_diff($values, $remove);
+					if (is_null($values)) {
+						$values = array();
 					
-					//$entry->setData($this->get('linked_field_id'), array(
-					//	'linked_entry_id'	=> $values
-					//));
-					//$entry->commit();
+					} else if (!is_array($values)) {
+						$values = array($values);
+					}
+					
+					$values[] = $entry_id;
+					
+					$entry->setData($this->get('linked_field_id'), array(
+						'linked_entry_id'	=> $values
+					));
+					$entry->commit();
 				}
-				
-				exit;
 			}
 			
 			return $result;
+		}
+		
+	/*-------------------------------------------------------------------------
+		Output:
+	-------------------------------------------------------------------------*/
+		
+		public function getParameterPoolValue($data) {
+			if (!is_array($data['linked_entry_id'])) {
+				$data['linked_entry_id'] = array($data['linked_entry_id']);
+			}
+			
+			return implode(', ', $data['linked_entry_id']);
+		}
+		
+		public function fetchIncludableElements() {
+			return array(
+				$this->get('element_name') . ': items',
+				$this->get('element_name') . ': entries'
+			);
+		}
+		
+		public function prepareData($data) {
+			if (!is_array($data['linked_entry_id'])) {
+				$data['linked_entry_id'] = array($data['linked_entry_id']);
+			}
+			
+			if (is_null($data['linked_entry_id'])) {
+				$data['linked_entry_id'] = array();
+			
+			} else if (!is_array($data['linked_entry_id'])) {
+				$data['linked_entry_id'] = array($data['linked_entry_id']);
+			}
+			
+			return $data;
+		}
+		
+		public function appendFormattedElement(&$wrapper, $data, $encode = false, $mode = null) {
+			$sectionManager = new SectionManager($this->_engine);
+			$entryManager = new EntryManager($this->_engine);
+			$linked_section_id = $this->get('linked_section_id');
+			$section = $sectionManager->fetch($linked_section_id);
+			$data = $this->prepareData($data);
+			
+			$list = new XMLElement($this->get('element_name'));
+			$list->setAttribute('mode', $mode);
+			
+			// No section or relations:
+			if (empty($section) or empty($data['linked_entry_id'])) return;
+			
+			$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
+			
+			// List:
+			if ($mode == null or $mode == 'items') {
+				$field = @current($section->fetchVisibleColumns());
+				
+				foreach ($entries as $count => $entry) {
+					if (empty($entry)) continue;
+					
+					$value = $field->prepareTableValue(
+						$entry->getData($field->get('id'))
+					);
+					$handle = Lang::createHandle($value);
+					
+					$item = new XMLElement('item', $value);
+					$item->setAttribute('id', $entry->get('id'));
+					$item->setAttribute('handle', $handle);
+					
+					$list->appendChild($item);
+					$list->setAttribute('entries', $count + 1);
+				}
+				
+			// Full:
+			} else if ($mode == 'entries') {
+				$list->appendChild(new XMLElement(
+					'section', $section->get('name'),
+					array(
+						'id'		=> $section->get('id'),
+						'handle'	=> $section->get('handle')
+					)
+				));
+				
+				foreach ($entries as $count => $entry) {
+					$associated = $entry->fetchAllAssociatedEntryCounts();
+					$data = $entry->getData();
+					
+					$item = new XMLElement('entry');
+					$item->setAttribute('id', $entry->get('id'));
+					
+					if (is_array($associated) and !empty($associated)) {
+						foreach ($associated as $section => $count) {
+							$handle = $this->_engine->Database->fetchVar('handle', 0, "
+								SELECT
+									s.handle
+								FROM
+									`tbl_sections` AS s
+								WHERE
+									s.id = '{$section}'
+								LIMIT 1
+							");
+							
+							$item->setAttribute($handle, (string)$count);
+						}
+					}
+					
+					// Add fields:
+					foreach ($data as $field_id => $values) {
+						$field = $entryManager->fieldManager->fetch($field_id);
+						
+						if ($field->get('type') == $this->get('type')) continue;
+						
+						$field->appendFormattedElement($item, $values, false);
+					}
+					
+					$list->appendChild($item);
+					$list->setAttribute('entries', $count + 1);
+				}
+			}
+			
+			$wrapper->appendChild($list);
+		}
+		
+		public function prepareTableValue($data, XMLElement $link = null, $entry_id = null) {
+			$sectionManager = new SectionManager($this->_engine);
+			$section = $sectionManager->fetch($this->get('linked_section_id'));
+			$entryManager = new EntryManager($this->_engine);
+			$fieldManager = new FieldManager($this->_engine);
+			$linked = $fieldManager->fetch($this->get('linked_field_id'));
+			$custom_link = null; $more_link = null;
+			
+			if ($section instanceof Section) {
+				$field = current($section->fetchVisibleColumns());
+				$data = $this->prepareData($data);
+				
+				if (!is_null($field)) { 
+					if ($this->get('column_mode') != 'count') {
+						if ($this->get('column_mode') == 'last-item') {
+							$order = 'ASC';
+							
+						} else {
+							$order = 'DESC';
+						}
+						
+						$entryManager->setFetchSorting('date', $order);
+						$entries = $entryManager->fetch($data['linked_entry_id'], $this->get('linked_section_id'), 1);
+						
+						if (is_array($entries) and !empty($entries)) {
+							$entry = current($entries);
+							$custom_link = new XMLElement('a');
+							$custom_link->setAttribute(
+								'href', sprintf(
+									'%s/symphony/publish/%s/edit/%s/',
+									URL,
+									$section->get('handle'),
+									$entry->get('id')
+								)
+							);
+							$custom_link->setValue(strip_tags(
+								$field->prepareTableValue($entry->getData($field->get('id')))
+							));
+							
+							$more_link = new XMLElement('a');
+							$more_link->setValue(__('more →'));
+							$more_link->setAttribute(
+								'href', sprintf(
+									'%s/symphony/publish/%s/?filter=%s:%s',
+									URL,
+									$section->get('handle'),
+									$linked->get('element_name'),
+									$entry_id
+								)
+							);
+						}
+						
+					} else {
+						$joins = null; $where = null;
+						
+						$linked->buildDSRetrivalSQL(array($entry_id), $joins, $where, false);
+						$count = $entryManager->fetchCount($this->get('linked_section_id'), $where, $joins);
+						
+						if ($count > 0) {
+							$custom_link = new XMLElement('a');
+							$custom_link->setValue($count . __(' →'));
+							$custom_link->setAttribute(
+								'href', sprintf(
+									'%s/symphony/publish/%s/?filter=%s:%s', URL,
+									$section->get('handle'),
+									$linked->get('element_name'),
+									$entry_id
+								)
+							);	
+						}
+					}
+				}
+			}
+			
+			if (is_null($custom_link)) {
+				return parent::prepareTableValue(null, $link);
+			}
+			
+			if ($link) {
+				$link->setValue($custom_link->getValue());
+				
+				return $link->generate();
+			}
+			
+			if ($this->get('column_mode') != 'count') {
+				$wrapper = new XMLElement('span');
+				$wrapper->setValue(
+					sprintf(
+						'%s, %s',
+						$custom_link->generate(),
+						$more_link->generate()
+					)
+				);
+				
+				return $wrapper;
+			}
+			
+			return $custom_link;
+		}
+		
+	/*-------------------------------------------------------------------------
+		Filtering:
+	-------------------------------------------------------------------------*/
+
+		public function buildDSRetrivalSQL($data, &$joins, &$where, $andOperation = false) {
+			$field_id = $this->get('id');
+			
+			if ($andOperation) {
+				foreach ($data as $value) {
+					$this->_key++;
+					$value = $this->cleanValue($value);
+					$joins .= "
+						LEFT JOIN
+							`tbl_entries_data_{$field_id}` AS t{$field_id}_{$this->_key}
+							ON (e.id = t{$field_id}_{$this->_key}.entry_id)
+					";
+					$where .= "
+						AND t{$field_id}_{$this->_key}.linked_entry_id = '{$value}'
+					";
+				}
+				
+			} else {
+				if (!is_array($data)) $data = array($data);
+				
+				foreach ($data as &$value) {
+					$value = $this->cleanValue($value);
+				}
+				
+				$this->_key++;
+				$data = implode("', '", $data);
+				$joins .= "
+					LEFT JOIN
+						`tbl_entries_data_{$field_id}` AS t{$field_id}_{$this->_key}
+						ON (e.id = t{$field_id}_{$this->_key}.entry_id)
+				";
+				$where .= "
+					AND t{$field_id}_{$this->_key}.linked_entry_id IN ('{$data}')
+				";
+			}
+
+			return true;
 		}
 	}
 	

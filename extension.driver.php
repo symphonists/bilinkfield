@@ -8,26 +8,26 @@
 		public function about() {
 			return array(
 				'name'			=> 'Field: Bi Link',
-				'version'		=> '1.001',
-				'release-date'	=> '2009-03-05',
+				'version'		=> '1.004',
+				'release-date'	=> '2009-03-23',
 				'author'		=> array(
 					'name'			=> 'Rowan Lewis',
 					'website'		=> 'http://pixelcarnage.com/',
 					'email'			=> 'rowan@pixelcarnage.com'
 				),
-				'description'	=> 'Real Parent to Child relationships for Symphony.'
+				'description'	=> 'A bi-directional linking system for Symphony.'
 			);
 		}
 		
 		public function install() {
 			$this->_Parent->Database->query("
 				CREATE TABLE IF NOT EXISTS `tbl_fields_bilink` (
-					`id` int(11) unsigned NOT NULL auto_increment,
-					`field_id` int(11) unsigned NOT NULL,
-					`linked_section_id` int(11) unsigned default NULL,
-					`linked_field_id` int(11) unsigned default NULL,
-					`allow_multiple` enum('yes','no') default NULL,
-					`column_mode` enum('count','first-item','last-item','small-list','large-list') default NULL,
+					`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+					`field_id` INT(11) UNSIGNED NOT NULL,
+					`linked_section_id` INT(11) UNSIGNED DEFAULT NULL,
+					`linked_field_id` INT(11) UNSIGNED DEFAULT NULL,
+					`allow_multiple` ENUM('yes','no') DEFAULT NULL,
+					`column_mode` ENUM('count','first-item','last-item','small-list','large-list') DEFAULT NULL,
 					PRIMARY KEY (`id`),
 					KEY `field_id` (`field_id`),
 					KEY `linked_section_id` (`linked_section_id`),
