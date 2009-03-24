@@ -429,7 +429,7 @@
 						$values = array($values);
 					}
 					
-					$values[] = $entry_id;
+					if (!in_array($entry_id, $values)) $values[] = $entry_id;
 					
 					$entry->setData($this->get('linked_field_id'), array(
 						'linked_entry_id'	=> $values
@@ -616,6 +616,7 @@
 						$joins = null; $where = null;
 						
 						$linked->buildDSRetrivalSQL(array($entry_id), $joins, $where, false);
+						
 						$count = $entryManager->fetchCount($this->get('linked_section_id'), $where, $joins);
 						
 						if ($count > 0) {

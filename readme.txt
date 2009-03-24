@@ -1,9 +1,9 @@
 Field: Bi-Link
 -------------------------------------------------------------------------------
 
-Version: 1.0.5
+Version: 1.0.6
 Author: Rowan Lewis <rowan@pixelcarnage.com>
-Build Date: 23 March 2009
+Build Date: 24 March 2009
 Requirements: Symphony 2.0.2
 
 
