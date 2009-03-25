@@ -665,6 +665,34 @@
 		Filtering:
 	-------------------------------------------------------------------------*/
 		
+		public function displayDatasourceFilterPanel(&$wrapper, $data = null, $errors = null, $prefix = null, $postfix = null) {
+			$field_id = $this->get('id');
+			
+			$wrapper->appendChild(new XMLElement(
+				'h4', sprintf(
+					'%s <i>%s</i>',
+					$this->get('label'),
+					$this->name()
+				)
+			));
+			
+			$prefix = ($prefix ? "[{$prefix}]" : '');
+			$postfix = ($postfix ? "[{$postfix}]" : '');
+			
+			$label = Widget::Label('Value');
+			$label->appendChild(Widget::Input(
+				"fields[filter]{$prefix}[{$field_id}]{$postfix}",
+				($data ? General::sanitize($data) : null)
+			));	
+			$wrapper->appendChild($label);
+			
+			$help = new XMLElement('p');
+			$help->setAttribute('class', 'help');
+			$help->setValue(__('To do a negative filter, prefix the value with <code>not:</code>.'));
+			
+			$wrapper->appendChild($help);
+		}
+		
 		public function buildDSRetrivalSQL($data, &$joins, &$where, $andOperation = false) {
 			$field_id = $this->get('id');
 			$method_not = false;
