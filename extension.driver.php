@@ -8,7 +8,7 @@
 		public function about() {
 			return array(
 				'name'			=> 'Field: Bi Link',
-				'version'		=> '1.0.7',
+				'version'		=> '1.0.8',
 				'release-date'	=> '2009-03-25',
 				'author'		=> array(
 					'name'			=> 'Rowan Lewis',
