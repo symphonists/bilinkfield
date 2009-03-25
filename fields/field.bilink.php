@@ -668,24 +668,7 @@
 		public function buildDSRetrivalSQL($data, &$joins, &$where, $andOperation = false) {
 			$field_id = $this->get('id');
 			
-			if (strpos($data[0], 'optional:') == 0) {
-				$value = trim(substr($this->cleanValue($data[0]), 9));
-				
-				$this->_key++;
-				$joins .= "
-					LEFT JOIN
-						`tbl_entries_data_{$field_id}` AS t{$field_id}_{$this->_key}
-						ON (e.id = t{$field_id}_{$this->_key}.entry_id)
-				";
-				$where .= "
-					AND (
-						'{$value}' IS NULL
-						OR '{$value}' = ''
-						OR t{$field_id}_{$this->_key}.linked_entry_id = '{$value}'
-					)
-				";
-				
-			} else if ($andOperation) {
+			if ($andOperation) {
 				foreach ($data as $value) {
 					$this->_key++;
 					$value = $this->cleanValue($value);
