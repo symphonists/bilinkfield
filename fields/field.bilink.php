@@ -664,11 +664,20 @@
 	/*-------------------------------------------------------------------------
 		Filtering:
 	-------------------------------------------------------------------------*/
-
+		
 		public function buildDSRetrivalSQL($data, &$joins, &$where, $andOperation = false) {
 			$field_id = $this->get('id');
+			$method_not = false;
+			
+			// Find mode:
+			if (preg_match('/^(not):/', $data[0], $match)) {
+				$data[0] = trim(substr($data[0], strlen(next($match)) + 1));
+				$name = 'method_' . current($match); $$name = true;
+			}
 			
 			if ($andOperation) {
+				$match = ($method_not ? '!=' : '=');
+				
 				foreach ($data as $value) {
 					$this->_key++;
 					$value = $this->cleanValue($value);
@@ -678,11 +687,13 @@
 							ON (e.id = t{$field_id}_{$this->_key}.entry_id)
 					";
 					$where .= "
-						AND t{$field_id}_{$this->_key}.linked_entry_id = '{$value}'
+						AND t{$field_id}_{$this->_key}.linked_entry_id {$match} '{$value}'
 					";
 				}
 				
 			} else {
+				$match = ($method_not ? 'NOT IN' : 'IN');
+				
 				if (!is_array($data)) $data = array($data);
 				
 				foreach ($data as &$value) {
@@ -697,7 +708,7 @@
 						ON (e.id = t{$field_id}_{$this->_key}.entry_id)
 				";
 				$where .= "
-					AND t{$field_id}_{$this->_key}.linked_entry_id IN ('{$data}')
+					AND t{$field_id}_{$this->_key}.linked_entry_id {$match} ('{$data}')
 				";
 			}
 
