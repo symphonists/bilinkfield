@@ -455,6 +455,7 @@
 		
 		public function fetchIncludableElements() {
 			return array(
+				$this->get('element_name') . ': count',
 				$this->get('element_name') . ': items',
 				$this->get('element_name') . ': entries'
 			);
@@ -475,7 +476,7 @@
 			return $data;
 		}
 		
-		public function appendFormattedElement(&$wrapper, $data, $encode = false, $mode = null) {
+		public function appendFormattedElement(&$wrapper, $data, $encode = false, $mode = null, $entry_id = null) {
 			$sectionManager = new SectionManager($this->_engine);
 			$entryManager = new EntryManager($this->_engine);
 			$linked_section_id = $this->get('linked_section_id');
@@ -484,14 +485,14 @@
 			
 			$list = new XMLElement($this->get('element_name'));
 			$list->setAttribute('mode', $mode);
+			$list->setAttribute('entries', count($data['linked_entry_id']));
 			
 			// No section or relations:
 			if (empty($section) or empty($data['linked_entry_id'])) return;
 			
-			$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
-			
 			// List:
 			if ($mode == null or $mode == 'items') {
+				$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
 				$field = @current($section->fetchVisibleColumns());
 				
 				foreach ($entries as $count => $entry) {
@@ -507,11 +508,11 @@
 					$item->setAttribute('handle', $handle);
 					
 					$list->appendChild($item);
-					$list->setAttribute('entries', $count + 1);
 				}
 				
 			// Full:
 			} else if ($mode == 'entries') {
+				$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
 				$list->appendChild(new XMLElement(
 					'section', $section->get('name'),
 					array(
@@ -553,7 +554,6 @@
 					}
 					
 					$list->appendChild($item);
-					$list->setAttribute('entries', $count + 1);
 				}
 			}
 			
