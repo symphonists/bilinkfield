@@ -636,7 +636,26 @@
 			}
 			
 			if (is_null($custom_link)) {
-				return parent::prepareTableValue(null, $link);
+				$custom_link = new XMLElement('a');
+				$custom_link->setValue(__('0 →'));
+				$custom_link->setAttribute(
+					'href', sprintf(
+						'%s/symphony/publish/%s/?filter=%s:%s',
+						URL,
+						$section->get('handle'),
+						$linked->get('element_name'),
+						$entry_id
+					)
+				);
+				
+				if ($this->get('column_mode') != 'count') {
+					$more_link = $custom_link;
+					$more_link->setValue(__('more →'));	
+					
+					$custom_link = new XMLElement('span');
+					$custom_link->setAttribute('class', 'inactive');
+					$custom_link->setValue(__('None'));
+				}
 			}
 			
 			if ($link) {
