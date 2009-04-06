@@ -8,8 +8,8 @@
 		public function about() {
 			return array(
 				'name'			=> 'Field: Bi Link',
-				'version'		=> '1.0.9',
-				'release-date'	=> '2009-04-01',
+				'version'		=> '1.0.10',
+				'release-date'	=> '2009-04-07',
 				'author'		=> array(
 					'name'			=> 'Rowan Lewis',
 					'website'		=> 'http://pixelcarnage.com/',
