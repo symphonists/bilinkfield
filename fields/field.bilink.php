@@ -358,7 +358,7 @@
 			
 			$result = array();
 			
-			foreach ($data as $a => $value) { 
+			foreach ($data as $a => $value) {
 				$result['linked_entry_id'][] = $data[$a];
 			}
 			
@@ -468,7 +468,7 @@
 			
 			if (is_null($data['linked_entry_id'])) {
 				$data['linked_entry_id'] = array();
-			
+				
 			} else if (!is_array($data['linked_entry_id'])) {
 				$data['linked_entry_id'] = array($data['linked_entry_id']);
 			}
@@ -488,7 +488,12 @@
 			$list->setAttribute('entries', count($data['linked_entry_id']));
 			
 			// No section or relations:
-			if (empty($section) or empty($data['linked_entry_id'])) return;
+			if (empty($section) or @empty($data['linked_entry_id'][0])) {
+				$list->setAttribute('entries', 0);
+				$wrapper->appendChild($list);
+				
+				return;
+			}
 			
 			// List:
 			if ($mode == null or $mode == 'items') {
