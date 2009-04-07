@@ -5,6 +5,8 @@
 		Definition:
 	-------------------------------------------------------------------------*/
 		
+		// Doing a submodule test...
+		
 		public function about() {
 			return array(
 				'name'			=> 'Field: Bi Link',
