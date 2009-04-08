@@ -498,6 +498,13 @@
 			// List:
 			if ($mode == null or $mode == 'items') {
 				$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
+				$list->appendChild(new XMLElement(
+					'section', $section->get('name'),
+					array(
+						'id'		=> $section->get('id'),
+						'handle'	=> $section->get('handle')
+					)
+				));
 				$field = @current($section->fetchVisibleColumns());
 				
 				foreach ($entries as $count => $entry) {
