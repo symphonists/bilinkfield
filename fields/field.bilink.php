@@ -515,7 +515,7 @@
 					);
 					$handle = Lang::createHandle($value);
 					
-					$item = new XMLElement('item', $value);
+					$item = new XMLElement('item', General::sanitize($value));
 					$item->setAttribute('id', $entry->get('id'));
 					$item->setAttribute('handle', $handle);
 					
