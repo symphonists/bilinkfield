@@ -580,6 +580,11 @@
 			$linked = $fieldManager->fetch($this->get('linked_field_id'));
 			$custom_link = null; $more_link = null;
 			
+			// Not setup correctly:
+			if (!$section instanceof Section) {
+				return parent::prepareTableValue(array(), $link, $entry_id);
+			}
+			
 			if ($section instanceof Section) {
 				$field = current($section->fetchVisibleColumns());
 				$data = $this->prepareData($data);
