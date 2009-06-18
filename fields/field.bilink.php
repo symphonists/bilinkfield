@@ -280,7 +280,7 @@
 		Publish:
 	-------------------------------------------------------------------------*/
 		
-		public function findEntries($entry_ids) {
+		public function findEntries($entry_ids, $current_entry_id = null) {
 			$sectionManager = new SectionManager($this->_engine);
 			$section = $sectionManager->fetch($this->get('linked_section_id'));
 			$entryManager = new EntryManager($this->_engine);
@@ -296,7 +296,7 @@
 				
 				$field = current($section->fetchVisibleColumns());
 				
-				if (!is_object($field)) continue;
+				if (!is_object($field) or $current_entry_id == $entry->get('id')) continue;
 				
 				$selected = in_array($entry->get('id'), $entry_ids);
 				
@@ -312,7 +312,7 @@
 			return $options;
 		}
 		
-		public function displayPublishPanel(&$wrapper, $data = null, $error = null, $prefix = null, $postfix = null) {
+		public function displayPublishPanel(&$wrapper, $data = null, $error = null, $prefix = null, $postfix = null, $entry_id = null) {
 			$handle = $this->get('element_name'); $entry_ids = array();
 			
 			if (!is_array($data['linked_entry_id']) and !is_null($data['linked_entry_id'])) {
@@ -322,7 +322,7 @@
 				$entry_ids = $data['linked_entry_id'];
 			}
 			
-			$options = $this->findEntries($entry_ids);
+			$options = $this->findEntries($entry_ids, $entry_id);
 			
 			$fieldname = "fields{$prefix}[{$handle}]{$postfix}";
 			
