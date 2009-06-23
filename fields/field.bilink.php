@@ -4,6 +4,7 @@
 	
 	class FieldBiLink extends Field {
 		protected $_driver = null;
+		public $_ignore = array();
 		
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -560,9 +561,14 @@
 					foreach ($data as $field_id => $values) {
 						$field = $entryManager->fieldManager->fetch($field_id);
 						
-						if ($field->get('type') == $this->get('type')) continue;
+						if ($field->get('type') == $this->get('type')) {
+							$field->_ignore = $this->_ignore;
+							$field->_ignore[] = $this->get('parent_section');
+							
+							if (in_array($field->get('parent_section'), $field->_ignore)) continue;
+						}
 						
-						$field->appendFormattedElement($item, $values, false);
+						$field->appendFormattedElement($item, $values, false, $mode);
 					}
 					
 					$list->appendChild($item);
