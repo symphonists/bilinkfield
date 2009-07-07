@@ -559,14 +559,13 @@
 					
 					// Add fields:
 					foreach ($data as $field_id => $values) {
+						// Comment this out to allow recursive fetching,
+						// and yes, it is dangerous.
+						continue;
+						
 						$field = $entryManager->fieldManager->fetch($field_id);
 						
-						if ($field->get('type') == $this->get('type')) {
-							$field->_ignore = $this->_ignore;
-							$field->_ignore[] = $this->get('parent_section');
-							
-							if (in_array($field->get('parent_section'), $field->_ignore)) continue;
-						}
+						if ($field->get('type') == $this->get('type')) continue;
 						
 						$field->appendFormattedElement($item, $values, false, $mode);
 					}
