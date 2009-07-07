@@ -579,6 +579,8 @@
 		}
 		
 		public function prepareTableValue($data, XMLElement $link = null, $entry_id = null) {
+			header('content-type: text/plain');
+			
 			$sectionManager = new SectionManager($this->_engine);
 			$section = $sectionManager->fetch($this->get('linked_section_id'));
 			$entryManager = new EntryManager($this->_engine);
@@ -609,6 +611,10 @@
 						
 						if (is_array($entries) and !empty($entries)) {
 							$entry = current($entries);
+							$value = $field->prepareTableValue(
+								$entry->getData($field->get('id')),
+								new XMLElement('span')
+							);
 							$custom_link = new XMLElement('a');
 							$custom_link->setAttribute(
 								'href', sprintf(
@@ -618,9 +624,12 @@
 									$entry->get('id')
 								)
 							);
-							$custom_link->setValue(strip_tags(
-								$field->prepareTableValue($entry->getData($field->get('id')))
-							));
+							
+							if ($value instanceof XMLElement) {
+								$value = $value->generate();
+							}
+							
+							$custom_link->setValue(strip_tags($value));
 							
 							$more_link = new XMLElement('a');
 							$more_link->setValue(__('more →'));
