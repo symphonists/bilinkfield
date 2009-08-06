@@ -5,7 +5,7 @@
 	class FieldBiLink extends Field {
 		protected $_driver = null;
 		public $_ignore = array();
-		private $_linked_field;
+		private $_linked_field = NULL;
 		
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -106,7 +106,7 @@
 		public function Linked(){
 			if(!($this->_linked_field instanceof StdClass)){
 				$this->_linked_field = (object)Symphony::Database()->fetchRow(0, 
-					"SELECT `allow_multiple` FROM `tbl_fields_bilink` WHERE `field_id` = {".$this->get('linked_field_id')."} LIMIT 1"
+					"SELECT `allow_multiple` FROM `tbl_fields_bilink` WHERE `field_id` = ".$this->get('linked_field_id')." LIMIT 1"
 				);
 			}
 			
@@ -396,9 +396,17 @@
 			);
 			
 			$remove = array_diff($remove, $data);
-
+			
 			if (!$simulate) {
 				$entryManager = new EntryManager($this->_engine);
+
+				// We need to also remove any other entries linking to the selected 
+				// if the linked field is single select. This is to maintain any
+				// one-to-many or one-to-one relationships
+				if($this->Linked()->allow_multiple == 'no'){
+					Symphony::Database()->query("DELETE FROM `tbl_entries_data_{$field_id}` WHERE `linked_entry_id` IN ('".@implode("','", $data)."')");
+					Symphony::Database()->query("DELETE FROM `tbl_entries_data_".$this->get('linked_field_id')."` WHERE `entry_id` IN ('".@implode("','", $data)."')");
+				}
 
 				// Remove old entries:
 				foreach ($remove as $linked_entry_id) {
@@ -410,10 +418,10 @@
 					
 					$values = $entry->getData($this->get('linked_field_id'));
 					
-					if (array_key_exists('linked_entry_id', $values)) {
+					if (is_array($values) && array_key_exists('linked_entry_id', $values)) {
 						$values = $values['linked_entry_id'];
 					}
-					
+
 					if (is_null($values)) {
 						$values = array();
 					
@@ -421,8 +429,8 @@
 						$values = array($values);
 					}
 					
-					$values = array_diff($values, array($entry_id));
-					
+					$values = array_values(array_diff($values, array($entry_id)));
+	
 					// This ensures that the MySQL::insert() function does not
 					// end up creating invalid SQL (bug with Symphony <= 2.0.6)
 					if(count($values) == 1){
@@ -432,7 +440,7 @@
 					$entry->setData($this->get('linked_field_id'), array(
 						'linked_entry_id'	=> $values
 					));
-
+	
 					$entry->commit();
 				}
 				
@@ -446,7 +454,7 @@
 					
 					$values = $entry->getData($this->get('linked_field_id'));
 				
-					if (array_key_exists('linked_entry_id', $values)) {
+					if (is_array($values) && array_key_exists('linked_entry_id', $values)) {
 						$values = $values['linked_entry_id'];
 					}
 				
@@ -464,6 +472,7 @@
 					// This ensures that the MySQL::insert() function does not
 					// end up creating invalid SQL (bug with Symphony <= 2.0.6)
 					if(count($values) == 1){
+						$values = array_values($values);
 						$values = $values[0];
 					}	
 					
