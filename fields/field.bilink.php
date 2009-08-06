@@ -397,6 +397,7 @@
 			
 			$remove = array_diff($remove, $data);
 			
+			
 			if (!$simulate) {
 				$entryManager = new EntryManager($this->_engine);
 
