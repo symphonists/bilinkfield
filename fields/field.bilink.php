@@ -73,8 +73,9 @@
 				
 				if (is_null($values)) {
 					$values = array();
-					
-				} else if (!is_array($values)) {
+				}
+				
+				else if (!is_array($values)) {
 					$values = array($values);
 				}
 				
@@ -107,6 +108,7 @@
 	-------------------------------------------------------------------------*/
 		
 		public function findDefaults(&$fields) {
+			if (!isset($fields['allow_editing'])) $fields['allow_editing'] = 'no';
 			if (!isset($fields['allow_multiple'])) $fields['allow_multiple'] = 'yes';
 			if (!isset($fields['column_size'])) $fields['column_size'] = 'medium';
 		}
@@ -207,6 +209,18 @@
 			$group->appendChild($label);
 			$wrapper->appendChild($group);
 			
+		// Allow Editing -----------------------------------------------------
+			
+			$label = Widget::Label();
+			$input = Widget::Input(
+				"fields[{$order}][allow_editing]", 'yes', 'checkbox'
+			);
+			
+			if ($this->get('allow_editing') == 'yes') $input->setAttribute('checked', 'checked');
+			
+			$label->setValue($input->generate() . ' ' . __('Allow editing of linked entries'));
+			$wrapper->appendChild($label);
+			
 		// Allow Multiple -----------------------------------------------------
 			
 			$label = Widget::Label();
@@ -217,7 +231,6 @@
 			if ($this->get('allow_multiple') == 'yes') $input->setAttribute('checked', 'checked');
 			
 			$label->setValue($input->generate() . ' ' . __('Allow selection of multiple options'));
-			
 			$wrapper->appendChild($label);
 			$this->appendShowColumnCheckbox($wrapper);
 			$this->appendRequiredCheckbox($wrapper);
@@ -244,6 +257,7 @@
 				'field_id'			=> $this->get('id'),
 				'linked_section_id'	=> $linked_section_id,
 				'linked_field_id'	=> $linked_field_id,
+				'allow_editing'		=> ($this->get('allow_editing') ? $this->get('allow_editing') : 'no'),
 				'allow_multiple'	=> ($this->get('allow_multiple') ? $this->get('allow_multiple') : 'no'),
 				'column_mode'		=> $this->get('column_mode')
 			);
@@ -318,8 +332,9 @@
 			
 			if (!is_array($data['linked_entry_id']) and !is_null($data['linked_entry_id'])) {
 				$entry_ids = array($data['linked_entry_id']);
-				
-			} else {
+			}
+			
+			else {
 				$entry_ids = $data['linked_entry_id'];
 			}
 			
@@ -377,66 +392,66 @@
 			
 			$remove = array_diff($remove, $data);
 			
-			if (!$simulate) {
-				$entryManager = new EntryManager($this->_engine);
+			if ($simulate) return $result;
+			
+			$entryManager = new EntryManager($this->_engine);
+			
+			// Remove old entries:
+			foreach ($remove as $linked_entry_id) {
+				if (is_null($linked_entry_id)) continue;
 				
-				// Remove old entries:
-				foreach ($remove as $linked_entry_id) {
-					if (is_null($linked_entry_id)) continue;
-					
-					$entry = @current($entryManager->fetch($linked_entry_id, $this->get('linked_section_id')));
-					
-					if (!is_object($entry)) continue;
-					
-					$values = $entry->getData($this->get('linked_field_id'));
-					
-					if (array_key_exists(linked_entry_id, $values)) {
-						$values = $values['linked_entry_id'];
-					}
-					
-					if (is_null($values)) {
-						$values = array();
-					
-					} else if (!is_array($values)) {
-						$values = array($values);
-					}
-					
-					$values = array_diff($values, array($entry_id));
-					
-					$entry->setData($this->get('linked_field_id'), array(
-						'linked_entry_id'	=> $values
-					));
-					$entry->commit();
+				$entry = @current($entryManager->fetch($linked_entry_id, $this->get('linked_section_id')));
+				
+				if (!is_object($entry)) continue;
+				
+				$values = $entry->getData($this->get('linked_field_id'));
+				
+				if (array_key_exists(linked_entry_id, $values)) {
+					$values = $values['linked_entry_id'];
 				}
 				
-				// Link new entries:
-				foreach ($data as $linked_entry_id) {
-					if (is_null($linked_entry_id)) continue;
-					
-					$entry = @current($entryManager->fetch($linked_entry_id, $this->get('linked_section_id')));
-					
-					if (!is_object($entry)) continue;
-					
-					$values = $entry->getData($this->get('linked_field_id'));
-					
-					if (array_key_exists(linked_entry_id, $values)) {
-						$values = $values['linked_entry_id'];
-					}
-					
-					if (is_null($values)) {
-						$values = array();
-					
-					} else if (!is_array($values)) {
-						$values = array($values);
-					}
-					
-					if (!in_array($entry_id, $values)) $values[] = $entry_id;
-					
-					$entry->setData($this->get('linked_field_id'), array(
-						'linked_entry_id'	=> $values
-					));
-					$entry->commit();
+				if (is_null($values)) {
+					$values = array();
+				
+				} else if (!is_array($values)) {
+					$values = array($values);
 				}
+				
+				$values = array_diff($values, array($entry_id));
+				
+				$entry->setData($this->get('linked_field_id'), array(
+					'linked_entry_id'	=> $values
+				));
+				$entry->commit();
+			}
+			
+			// Link new entries:
+			foreach ($data as $linked_entry_id) {
+				if (is_null($linked_entry_id)) continue;
+				
+				$entry = @current($entryManager->fetch($linked_entry_id, $this->get('linked_section_id')));
+				
+				if (!is_object($entry)) continue;
+				
+				$values = $entry->getData($this->get('linked_field_id'));
+				
+				if (array_key_exists(linked_entry_id, $values)) {
+					$values = $values['linked_entry_id'];
+				}
+				
+				if (is_null($values)) {
+					$values = array();
+				
+				} else if (!is_array($values)) {
+					$values = array($values);
+				}
+				
+				if (!in_array($entry_id, $values)) $values[] = $entry_id;
+				
+				$entry->setData($this->get('linked_field_id'), array(
+					'linked_entry_id'	=> $values
+				));
+				$entry->commit();
 			}
 			
 			return $result;
@@ -469,8 +484,9 @@
 			
 			if (is_null($data['linked_entry_id'])) {
 				$data['linked_entry_id'] = array();
-				
-			} else if (!is_array($data['linked_entry_id'])) {
+			}
+			
+			else if (!is_array($data['linked_entry_id'])) {
 				$data['linked_entry_id'] = array($data['linked_entry_id']);
 			}
 			
@@ -522,9 +538,10 @@
 					
 					$list->appendChild($item);
 				}
-				
+			}
+			
 			// Full:
-			} else if ($mode == 'entries') {
+			else if ($mode == 'entries') {
 				$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
 				$list->appendChild(new XMLElement(
 					'section', $section->get('name'),
@@ -561,8 +578,6 @@
 					foreach ($data as $field_id => $values) {
 						$field = $entryManager->fieldManager->fetch($field_id);
 						
-						// Comment this out to allow recursive fetching,
-						// and yes, it is dangerous.
 						if ($field->get('type') == $this->get('type')) continue;
 						
 						$field->appendFormattedElement($item, $values, false, $mode);
