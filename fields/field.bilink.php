@@ -5,6 +5,7 @@
 	class FieldBiLink extends Field {
 		protected $_driver = null;
 		public $_ignore = array();
+		private $_linked_field = NULL;
 		
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -24,7 +25,7 @@
 		public function createTable() {
 			$field_id = $this->get('id');
 			
-			return $this->_engine->Database->query("
+			return Symphony::Database()->query("
 				CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$field_id}` (
 					`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
 					`entry_id` INT(11) UNSIGNED NOT NULL,
@@ -47,7 +48,7 @@
 		public function entryDataCleanup($entry_id, $data = null) {
 			$entryManager = new EntryManager($this->_engine);
 			$field_id = $this->get('id');
-			$entries = $this->_engine->Database->fetchCol('linked_entry_id',
+			$entries = Symphony::Database()->fetchCol('linked_entry_id',
 				sprintf("
 					SELECT
 						f.linked_entry_id
@@ -67,7 +68,7 @@
 				
 				$values = $entry->getData($this->get('linked_field_id'));
 				
-				if (array_key_exists(linked_entry_id, $values)) {
+				if (array_key_exists('linked_entry_id', $values)) {
 					$values = $values['linked_entry_id'];
 				}
 				
@@ -101,6 +102,20 @@
 			if (empty($section)) return null;
 			
 			return $section->fetchFields();
+		}
+		
+		public function Linked(){
+			if(!($this->_linked_field instanceof StdClass)){
+				$this->_linked_field = (object)Symphony::Database()->fetchRow(0, 
+					"SELECT `allow_multiple` FROM `tbl_fields_bilink` WHERE `field_id` = ".$this->get('linked_field_id')." LIMIT 1"
+				);
+			}
+			
+			return $this->_linked_field;
+		}
+		
+		protected function isOneToManyRelationship() {
+			return (strcasecmp($this->Linked()->allow_multiple, 'no') === 0);
 		}
 		
 	/*-------------------------------------------------------------------------
@@ -243,7 +258,7 @@
 			$handle = $this->handle();
 			
 			$linked_field_id = $this->get('linked_field_id');
-			$linked_section_id = $this->_engine->Database->fetchVar('parent_section', 0, "
+			$linked_section_id = Symphony::Database()->fetchVar('parent_section', 0, "
 				SELECT
 					f.parent_section
 				FROM
@@ -264,7 +279,7 @@
 			
 		// Cleanup ------------------------------------------------------------
 			
-			$this->_engine->Database->query("
+			Symphony::Database()->query("
 				DELETE FROM
 					`tbl_fields_{$handle}`
 				WHERE
@@ -274,7 +289,7 @@
 			
 		// Create -------------------------------------------------------------
 			
-			if (!$this->_engine->Database->insert($fields, "tbl_fields_{$handle}")) return false;
+			if (!Symphony::Database()->insert($fields, "tbl_fields_{$handle}")) return false;
 			
 			// Update child field:
 			if ($linked_field_id) {
@@ -301,8 +316,6 @@
 			$entryManager = new EntryManager($this->_engine);
 			$entries = $entryManager->fetch(null, $this->get('linked_section_id'));
 			$options = array();
-			
-			if ($this->get('required') != 'yes') $options[] = array(null, false, null);
 			
 			if (!is_object($section) or empty($entries)) return $options;
 			
@@ -342,7 +355,13 @@
 			
 			$fieldname = "fields{$prefix}[{$handle}]{$postfix}";
 			
-			if ($this->get('allow_multiple') == 'yes') $fieldname .= '[]';
+			if ($this->get('allow_multiple') == 'yes') {
+				$fieldname .= '[]';
+			}
+			
+			else if ($this->get('required') != 'yes') {
+				array_unshift($options, array(null, false, null));
+			}
 			
 			$label = Widget::Label($this->get('label'));
 			$select = Widget::Select($fieldname, $options);
@@ -367,7 +386,7 @@
 		public function processRawFieldData($data, &$status, $simulate = false, $entry_id = null) {
 			$field_id = $this->get('id');
 			$status = self::__OK__;
-			
+
 			if (!is_array($data)) $data = array($data);
 			
 			if (empty($data)) return null;
@@ -379,7 +398,7 @@
 			}
 			
 			// Update linked field:
-			$remove = $this->_engine->Database->fetchCol('linked_entry_id',
+			$remove = Symphony::Database()->fetchCol('linked_entry_id',
 				sprintf("
 					SELECT
 						f.linked_entry_id
@@ -396,6 +415,32 @@
 			
 			$entryManager = new EntryManager($this->_engine);
 			
+			// We need to also remove any other entries linking to the selected 
+			// if the linked field is single select. This is to maintain any
+			// one-to-many or one-to-one relationships
+			if ($this->Linked()->allow_multiple == 'no') {
+				Symphony::Database()->query(sprintf(
+					"
+						DELETE FROM
+							`tbl_entries_data_%s`
+						WHERE
+							`linked_entry_id` IN ('%s')
+					",
+					$field_id,
+					@implode("','", $data)
+				);
+				Symphony::Database()->query(sprintf(
+					"
+						DELETE FROM
+							`tbl_entries_data_%s`
+						WHERE
+							`entry_id` IN ('%s')
+					",
+					$this->get('linked_field_id'),
+					@implode("','", $data)
+				);
+			}
+			
 			// Remove old entries:
 			foreach ($remove as $linked_entry_id) {
 				if (is_null($linked_entry_id)) continue;
@@ -406,22 +451,30 @@
 				
 				$values = $entry->getData($this->get('linked_field_id'));
 				
-				if (array_key_exists(linked_entry_id, $values)) {
+				if (is_array($values) && array_key_exists('linked_entry_id', $values)) {
 					$values = $values['linked_entry_id'];
 				}
 				
 				if (is_null($values)) {
 					$values = array();
+				}
 				
-				} else if (!is_array($values)) {
+				else if (!is_array($values)) {
 					$values = array($values);
 				}
 				
-				$values = array_diff($values, array($entry_id));
+				$values = array_values(array_diff($values, array($entry_id)));
+				
+				// This ensures that the MySQL::insert() function does not
+				// end up creating invalid SQL (bug with Symphony <= 2.0.6)
+				if(count($values) == 1){
+					$values = $values[0];
+				}
 				
 				$entry->setData($this->get('linked_field_id'), array(
 					'linked_entry_id'	=> $values
 				));
+				
 				$entry->commit();
 			}
 			
@@ -435,24 +488,42 @@
 				
 				$values = $entry->getData($this->get('linked_field_id'));
 				
-				if (array_key_exists(linked_entry_id, $values)) {
+				if (is_array($values) && array_key_exists('linked_entry_id', $values)) {
 					$values = $values['linked_entry_id'];
 				}
 				
 				if (is_null($values)) {
 					$values = array();
+				}
 				
-				} else if (!is_array($values)) {
+				else if (!is_array($values)) {
 					$values = array($values);
 				}
 				
-				if (!in_array($entry_id, $values)) $values[] = $entry_id;
+				if (!in_array($entry_id, $values)){
+					$values[] = $entry_id;
+				}
+				
+				// This ensures that the MySQL::insert() function does not
+				// end up creating invalid SQL (bug with Symphony <= 2.0.6)
+				if(count($values) == 1){
+					$values = array_values($values);
+					$values = $values[0];
+				}	
 				
 				$entry->setData($this->get('linked_field_id'), array(
 					'linked_entry_id'	=> $values
 				));
+				
 				$entry->commit();
 			}
+			
+			if (!in_array($entry_id, $values)) $values[] = $entry_id;
+			
+			$entry->setData($this->get('linked_field_id'), array(
+				'linked_entry_id'	=> $values
+			));
+			$entry->commit();
 			
 			return $result;
 		}
@@ -560,7 +631,7 @@
 					
 					if (is_array($associated) and !empty($associated)) {
 						foreach ($associated as $section => $count) {
-							$handle = $this->_engine->Database->fetchVar('handle', 0, "
+							$handle = Symphony::Database()->fetchVar('handle', 0, "
 								SELECT
 									s.handle
 								FROM
@@ -613,8 +684,9 @@
 					if ($this->get('column_mode') != 'count') {
 						if ($this->get('column_mode') == 'last-item') {
 							$order = 'ASC';
-							
-						} else {
+						}
+						
+						else {
 							$order = 'DESC';
 						}
 						
@@ -655,8 +727,9 @@
 								)
 							);
 						}
-						
-					} else {
+					}
+					
+					else {
 						$joins = null; $where = null;
 						
 						$linked->buildDSRetrivalSQL(array($entry_id), $joins, $where, false);
@@ -781,8 +854,9 @@
 						AND t{$field_id}_{$this->_key}.linked_entry_id {$match} '{$value}'
 					";
 				}
-				
-			} else {
+			}
+			
+			else {
 				$match = ($method_not ? 'NOT IN' : 'IN');
 				
 				if (!is_array($data)) $data = array($data);
