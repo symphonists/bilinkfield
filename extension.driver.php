@@ -45,6 +45,22 @@
 			
 			return true;
 		}
+		
+	/*-------------------------------------------------------------------------
+		Utilites:
+	-------------------------------------------------------------------------*/
+		
+		protected $addedHeaders = false;
+		
+		public function addHeaders($page) {
+			if (!$this->addedHeaders) {
+				$page->addScriptToHead(URL . '/extensions/bilinkfield/assets/symphony.duplicator.js', 123269780);
+				$page->addScriptToHead(URL . '/extensions/bilinkfield/assets/publish.js', 123269781);
+				$page->addStylesheetToHead(URL . '/extensions/bilinkfield/assets/publish.css', 'screen', 123269781);
+				
+				$this->addedHeaders = true;
+			}
+		}
 	}
 		
 ?>

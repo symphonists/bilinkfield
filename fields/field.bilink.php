@@ -6,6 +6,9 @@
 		protected $_driver = null;
 		public $_ignore = array();
 		private $_linked_field = NULL;
+		static public $errors = array();
+		static public $entries = array();
+		protected $is_fail = true;
 		
 	/*-------------------------------------------------------------------------
 		Definition:
@@ -193,7 +196,7 @@
 			$order = $this->get('sortorder');
 			
 		// Linked -------------------------------------------------------------
-		
+			
 			$group = new XMLElement('div');
 			$group->setAttribute('class', 'group');
 			
@@ -341,6 +344,7 @@
 		}
 		
 		public function displayPublishPanel(&$wrapper, $data = null, $error = null, $prefix = null, $postfix = null, $entry_id = null) {
+			$this->_driver->addHeaders($this->_engine->Page);
 			$handle = $this->get('element_name'); $entry_ids = array();
 			
 			if (!is_array($data['linked_entry_id']) and !is_null($data['linked_entry_id'])) {
@@ -351,45 +355,232 @@
 				$entry_ids = $data['linked_entry_id'];
 			}
 			
-			$options = $this->findEntries($entry_ids, $entry_id);
-			
-			$fieldname = "fields{$prefix}[{$handle}]{$postfix}";
-			
-			if ($this->get('allow_multiple') == 'yes') {
-				$fieldname .= '[]';
+			if ($this->get('allow_editing') != 'yes') {
+				$options = $this->findEntries($entry_ids, $entry_id);
+				
+				$fieldname = "fields{$prefix}[{$handle}]{$postfix}";
+				
+				if ($this->get('allow_multiple') == 'yes') {
+					$fieldname .= '[]';
+				}
+				
+				else if ($this->get('required') != 'yes') {
+					array_unshift($options, array(null, false, null));
+				}
+				
+				$label = Widget::Label($this->get('label'));
+				$select = Widget::Select($fieldname, $options);
+				
+				if ($this->get('allow_multiple') == 'yes') {
+					$select->setAttribute('multiple', 'multiple');
+				}
+				
+				$label->appendChild($select);
+				
+				if ($error != null) {
+					$label = Widget::wrapFormElementWithError($label, $error);
+				}
+				
+				$wrapper->appendChild($label);
 			}
 			
-			else if ($this->get('required') != 'yes') {
-				array_unshift($options, array(null, false, null));
+			else {
+				header('content-type: text/plain');
+				
+				$label = new XMLElement('h3', $this->get('label'));
+				$wrapper->appendChild($label);
+				
+				$ol = new XMLElement('ol');
+				
+				if ($this->get('allow_multiple') == 'yes') {
+					$ol->setAttribute('class', 'multiple');
+				}
+				
+				else {
+					$ol->setAttribute('class', 'single');
+				}
+				
+				$sectionManager = new SectionManager($this->_engine);
+				$section = $sectionManager->fetch($this->get('linked_section_id'));
+				$entryManager = new EntryManager($this->_engine);
+				$possible_entries = $entryManager->fetch(null, $this->get('linked_section_id'));
+				$linked_entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
+				$fields = array(); $first = null;
+				
+				if ($section) {
+					$fields = $section->fetchFields();
+					$first = array_shift($section->fetchVisibleColumns());
+				}
+				
+				$this->displayItem($ol, __('Empty'), -1, $entryManager->create(), $first, $fields);
+				
+				if ($linked_entries) {
+					foreach ($linked_entries as $index => $entry) {
+						unset($linked_entries[$index]);
+						$linked_entries[$entry->get('id')] = $entry;
+					}
+					
+					foreach ($entry_ids as $order => $linked_entry) {
+						if (!isset($linked_entries[$linked_entry])) continue;
+						
+						$entry = $linked_entries[$linked_entry];
+						$this->displayItem($ol, __('None'), $order, $entry, $first, $fields);
+					}
+				}
+				
+				if ($possible_entries) foreach ($possible_entries as $order => $entry) {
+					if (in_array($entry->get('id'), $entry_ids)) continue;
+					
+					$this->displayItem($ol, __('None'), -1, $entry, $first, $fields);
+				}
+				
+				$wrapper->appendChild($ol);
+			}
+		}
+		
+		protected function displayItem($wrapper, $title, $order, $entry, $first, $fields) {
+			$handle = $this->get('element_name');
+			
+			if ($first) {
+				$new_title = $first->prepareTableValue(
+					$entry->getData($first->get('id'))
+				);
+				
+				if ($new_title != '') $title = $new_title;
 			}
 			
-			$label = Widget::Label($this->get('label'));
-			$select = Widget::Select($fieldname, $options);
+			$item = new XMLElement('li');
+			$item->appendChild(new XMLElement('h4', $title));
 			
-			if ($this->get('allow_multiple') == 'yes') {
-				$select->setAttribute('multiple', 'multiple');
+			$input = Widget::Input(
+				"fields[{$handle}][entry_id][{$order}]",
+				$entry->get('id')
+			);
+			$input->setAttribute('type', 'hidden');
+			$item->appendChild($input);
+			
+			$group = new XMLElement('div');
+			
+			$left = new XMLElement('div');
+			$right = new XMLElement('div');
+			
+			if ($order < 0) {
+				$item->setAttribute('class', 'template');
 			}
 			
-			$label->appendChild($select);
-			
-			if ($error != null) {
-				$label = Widget::wrapFormElementWithError($label, $error);
+			foreach ($fields as $field) {
+				if ($field->get('linked_section_id') == $this->get('parent_section')) continue;
+				
+				$name = "[{$handle}][entry][{$order}]";
+				$data = $entry->getData($field->get('id'));
+				$error = self::$errors[$this->get('id')][$order][$field->get('id')];
+				
+				if ($this->get('location') != 'main') {
+					$container = $group;
+				}
+				
+				else if ($field->get('location') == 'main') {
+					$container = $left;
+				}
+				
+				else {
+					$container = $right;
+				}
+				
+				$field->displayPublishPanel($container, $data, $error, $name, null, $entry->get('id'));
 			}
 			
-			$wrapper->appendChild($label);
+			if ($this->get('location') == 'main') {
+				$group->setAttribute('class', 'group');
+				$group->appendChild($left);
+				$group->appendChild($right);
+			}
+			
+			$item->appendChild($group);
+			$wrapper->appendChild($item);
 		}
 		
 	/*-------------------------------------------------------------------------
 		Input:
 	-------------------------------------------------------------------------*/
 		
+		public function checkPostFieldData($data, &$error = null, $entry_id = null) {
+			if (!isset($data['entry']) or !is_array($data['entry'])) return self::__OK__;
+			
+			$entryManager = new EntryManager($this->_engine);
+			$fieldManager = new FieldManager($this->_engine);
+			$field = $fieldManager->fetch($this->get('linked_field_id'));
+			$status = self::__OK__;
+			
+			// Create:
+			foreach ($data['entry'] as $index => $entry_data) {
+				$existing_id = (integer)$data['entry_id'][$index];
+				
+				if ($existing_id <= 0) {
+					$entry = $entryManager->create();
+					$entry->set('section_id', $this->get('linked_section_id'));
+					$entry->set('author_id', $this->_engine->Author->get('id'));
+					$entry->set('creation_date', DateTimeObj::get('Y-m-d H:i:s'));
+					$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
+				}
+				
+				else {
+					$entry = @current($entryManager->fetch($existing_id, $this->get('linked_section_id')));
+				}
+				
+				// Append correct linked data:
+				$existing_data = $entry->getData($this->get('linked_field_id'));
+				$existing_entries = array();
+				
+				if (isset($existing_data['linked_entry_id'])) {
+					if (!is_array($existing_data['linked_entry_id'])) {
+						$existing_entries[] = $existing_data['linked_entry_id'];
+					}
+					
+					else foreach ($existing_data['linked_entry_id'] as $linked_entry_id) {
+						$existing_entries[] = $linked_entry_id;
+					}
+				}
+				
+				if (!in_array($entry_id, $existing_entries)) {
+					$existing_entries[] = $entry_id;
+				}
+				
+				$entry_data[$field->get('element_name')] = $existing_entries;
+				
+				// Validate:
+				if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $errors)) {
+					self::$errors[$entry_id][] = $errors;
+					
+					$status = self::__INVALID_FIELDS__;
+				}
+				
+				else if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
+					$status = self::__INVALID_FIELDS__;
+				}
+				
+				self::$entries[$entry_id][] = $entry;
+			}
+			
+			return $status;
+		}
+		
 		public function processRawFieldData($data, &$status, $simulate = false, $entry_id = null) {
 			$field_id = $this->get('id');
 			$status = self::__OK__;
-
-			if (!is_array($data)) $data = array($data);
+			
+			if (!empty(self::$entries[$entry_id])) {
+				$data = array();
+				
+				foreach (self::$entries[$entry_id] as $entry) {
+					$entry->commit();
+					$data[] = $entry->get('id');
+				}
+			}
 			
 			if (empty($data)) return null;
+			
+			if (!is_array($data)) $data = array($data);
 			
 			$result = array();
 			
@@ -428,7 +619,7 @@
 					",
 					$field_id,
 					@implode("','", $data)
-				);
+				));
 				Symphony::Database()->query(sprintf(
 					"
 						DELETE FROM
@@ -438,7 +629,7 @@
 					",
 					$this->get('linked_field_id'),
 					@implode("','", $data)
-				);
+				));
 			}
 			
 			// Remove old entries:
@@ -467,7 +658,7 @@
 				
 				// This ensures that the MySQL::insert() function does not
 				// end up creating invalid SQL (bug with Symphony <= 2.0.6)
-				if(count($values) == 1){
+				if (count($values) == 1) {
 					$values = $values[0];
 				}
 				
@@ -518,12 +709,16 @@
 				$entry->commit();
 			}
 			
+			if (!is_array($values)) $values = array($values);
+			
 			if (!in_array($entry_id, $values)) $values[] = $entry_id;
 			
-			$entry->setData($this->get('linked_field_id'), array(
-				'linked_entry_id'	=> $values
-			));
-			$entry->commit();
+			if ($entry) {
+				$entry->setData($this->get('linked_field_id'), array(
+					'linked_entry_id'	=> $values
+				));
+				$entry->commit();
+			}
 			
 			return $result;
 		}
