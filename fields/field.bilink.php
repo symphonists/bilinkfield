@@ -335,7 +335,13 @@
 				
 				if (!is_object($field) or $current_entry_id == $entry->get('id')) continue;
 				
-				$selected = in_array($entry->get('id'), $entry_ids);
+				if (is_array($entry_ids)) {
+					$selected = in_array($entry->get('id'), $entry_ids);
+				}
+				
+				else {
+					$selected = false;
+				}
 				
 				$value = $field->prepareTableValue(
 					$entry->getData($field->get('id'))
@@ -443,7 +449,7 @@
 				}
 				
 				if ($possible_entries) foreach ($possible_entries as $order => $entry) {
-					if (in_array($entry->get('id'), $entry_ids)) continue;
+					if (is_array($entry_ids) and in_array($entry->get('id'), $entry_ids)) continue;
 					
 					$this->displayItem($ol, __('None'), -1, $entry, $first, $fields);
 				}
@@ -523,15 +529,14 @@
 	-------------------------------------------------------------------------*/
 		
 		public function checkPostFieldData($data, &$error = null, $entry_id = null) {
-			$field_id = $this->get('id');
-			$status = self::__OK__;
+			header('content-type: text/plain');
 			
 			if (isset($data['entry']) and is_array($data['entry'])) {
-				header('content-type: text/plain');
-				
 				$entryManager = new EntryManager($this->_engine);
 				$fieldManager = new FieldManager($this->_engine);
 				$field = $fieldManager->fetch($this->get('linked_field_id'));
+				$field_id = $this->get('id');
+				$status = self::__OK__;
 				
 				self::$errors[$field_id] = array();
 				self::$entries[$field_id] = array();
@@ -593,32 +598,17 @@
 					
 					self::$entries[$field_id][$index] = $entry;
 				}
-			}
-			
-			else if (is_array($data)) {
-				return parent::checkPostFieldData($data, $error, $entry_id);
-			}
-			
-			else {
-				if ($this->get('required') != 'yes') {
-					return self::__OK__;
-				}
 				
-				$error = __(
-					"'%s' is a required field.", array(
-						$this->get('label')
-					)
-				);
-				
-				return self::__MISSING_FIELDS__;
+				return $status;
 			}
 			
-			return $status;
+			return parent::checkPostFieldData($data, $error, $entry_id);
 		}
 		
 		public function processRawFieldData($data, &$status, $simulate = false, $entry_id = null) {
 			$field_id = $this->get('id');
 			$status = self::__OK__;
+			$result = array();
 			
 			if (!empty(self::$entries[$field_id])) {
 				$data = array();
@@ -629,11 +619,13 @@
 				}
 			}
 			
-			if (empty($data)) return null;
+			if (empty($data)) {
+				return null;
+			}
 			
-			if (!is_array($data)) $data = array($data);
-			
-			$result = array();
+			if (!is_array($data)) {
+				$data = array($data);
+			}
 			
 			foreach ($data as $a => $value) {
 				$result['linked_entry_id'][] = $data[$a];
@@ -746,7 +738,7 @@
 					$values = array($values);
 				}
 				
-				if (!in_array($entry_id, $values)){
+				if (!in_array($entry_id, $values)) {
 					$values[] = $entry_id;
 				}
 				
@@ -768,11 +760,15 @@
 				$entry->commit();
 			}
 			
-			if (!is_array($values)) $values = array($values);
-			
-			if (!in_array($entry_id, $values)) $values[] = $entry_id;
-			
 			if ($entry) {
+				if (!is_array($values)) {
+					$values = array($values);
+				}
+				
+				if (!in_array($entry_id, $values)) {
+					$values[] = $entry_id;
+				}
+				
 				if (empty($values)) {
 					$values = null;
 				}
