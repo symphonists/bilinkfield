@@ -411,6 +411,10 @@
 				
 				$this->displayItem($ol, __('New'), -1, $entryManager->create(), $first, $fields);
 				
+				header('content-type: text/plain');
+				
+				//var_dump(self::$errors); exit;
+				
 				if (self::$entries[$field_id]) {
 					foreach (self::$entries[$field_id] as $order => $entry) {
 						$this->displayItem($ol, __('None'), $order, $entry, $first, $fields);
@@ -519,6 +523,8 @@
 			$field_id = $this->get('id');
 			$status = self::__OK__;
 			
+			header('content-type: text/plain');
+			
 			if ($this->get('allow_editing') != 'yes') {
 				return parent::checkPostFieldData($data, $error, $entry_id);
 			}
@@ -585,11 +591,11 @@
 					if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $errors)) {
 						self::$errors[$field_id][$index] = $errors;
 						
-						$status = self::__INVALID_FIELDS__;
+						//$status = self::__INVALID_FIELDS__;
 					}
 					
 					else if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
-						$status = self::__INVALID_FIELDS__;
+						//$status = self::__INVALID_FIELDS__;
 					}
 					
 					self::$entries[$field_id][$index] = $entry;
@@ -604,6 +610,8 @@
 			$status = self::__OK__;
 			
 			if (!empty(self::$entries[$field_id])) {
+				$status = self::__INVALID_FIELDS__;
+				return null;
 				$data = array();
 				
 				foreach (self::$entries[$field_id] as $entry) {
