@@ -2,22 +2,33 @@
 	Bi Link Field
 -----------------------------------------------------------------------------*/
 	
+	.field-bilink > h3 {
+		font-weight: normal;
+		margin-bottom: 0;
+	}
 	.field-bilink > ol {
+		background: #999988;
 		border: 1px solid #999988;
-		border-bottom: none;
 		margin: 0 0 1.75em 0;
 		list-style: none;
 		overflow: hidden;
+	}
+	.invalid .field-bilink > ol {
+		border-color: #aa2211;
 	}
 	.field-bilink > ol > .instance {
 		background: #ddddcc;
 		border-bottom: 1px solid #eeeedd;
 		overflow: hidden;
+		margin: 0 0 0 0;
 		padding: 0 1.75em;
+		position: relative;
+		z-index: 2001;
 	}
 	.field-bilink > ol > .instance > .header {
 		background: #ccccbb;
 		border-bottom: 1px solid #eeeedd;
+		color: #666655;
 		cursor: pointer;
 		margin: 0 -1.75em 1em -1.75em;
 		padding: 0.5em 1.75em;
@@ -26,7 +37,7 @@
 	}
 	.field-bilink > ol > .instance > .header .destructor {
 		font-weight: normal;
-		color: #222211;
+		color: #333322;
 		margin: 0 1.75em;
 		padding: 0.5em 0;
 		position: absolute;
@@ -35,35 +46,41 @@
 		top: 0;
 	}
 	.field-bilink > ol > .instance > .header .destructor:hover {
-		color: #444433;
+		color: #555544;
 	}
 	.field-bilink > ol > .instance > .header .destructor.disabled {
-		color: #222211;
+		color: #333322;
 		cursor: default;
 		opacity: 0.4;
 	}
 	
+	.field-bilink > ol.ordering > .instance {
+		opacity: 0.7;
+	}
 	.field-bilink > ol > .instance.ordering {
-		background: #aaaa99;
+		border-top: 1px solid #eeeedd;
+		-moz-box-shadow: 0 0 16px #888877;
+		-webkit-box-shadow: 0 0 16px #888877;
+		margin: -1px 0 0 0;
+		opacity: 1;
+		z-index: 2002;
 	}
 	.field-bilink > ol > .instance.ordering,
 	.field-bilink > ol > .instance.ordering * {
 		cursor: move;
 	}
 	.field-bilink > ol > .instance.ordering > .header {
-		background: #888877;
-		border-bottom-color: #bbbbaa;
+		
 	}
 	
 	.field-bilink > ol > .controls {
-		background: #999988;
-		-moz-box-shadow: 0 0 8px #eeeedd;
-		-webkit-box-shadow: 0 0 8px #eeeedd;
+		background: #aaaa99;
+		border-top: 1px solid #aaaa99;
 		cursor: default;
-		margin: -1px 0 0 0;
 		padding: 0 1.75em;
 		position: relative;
 		text-align: right;
+		z-index: 2003;
 	}
 	.field-bilink > ol > .controls > * {
 		display: inline-block;

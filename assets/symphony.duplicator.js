@@ -180,6 +180,8 @@
 				// Order instances:
 				order_state:	function() {
 					if (storage.ordering.instance) {
+						widgets.wrapper
+							.removeClass('ordering');
 						storage.ordering.instance
 							.removeClass('ordering');
 					}
@@ -207,7 +209,10 @@
 					
 					storage.ordering.min = Math.min(b, a + (instance.prev().offset().top || -Infinity));
 					storage.ordering.max = Math.max(a + b, b + (instance.next().height() ||  Infinity));
-					storage.ordering.instance.addClass('ordering');
+					widgets.wrapper
+						.addClass('ordering');
+					storage.ordering.instance
+						.addClass('ordering');
 					storage.ordering.started = true;
 					methods.collapse_state();
 					
@@ -250,7 +255,10 @@
 					jQuery(document).unbind('mouseup', methods.ordered);
 					
 					if (storage.ordering.started) {
-						storage.ordering.instance.removeClass('ordering');
+						widgets.wrapper
+							.removeClass('ordering');
+						storage.ordering.instance
+							.removeClass('ordering');
 						methods.order_state();
 						methods.refresh();
 					}

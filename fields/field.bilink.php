@@ -50,26 +50,25 @@
 		
 		public function entryDataCleanup($entry_id, $data = null) {
 			$entryManager = new EntryManager($this->_engine);
-			$field_id = $this->get('id');
-			$entries = Symphony::Database()->fetchCol('linked_entry_id',
-				sprintf("
+			$field_id = $this->get('linked_field_id');
+			$entry_ids = Symphony::Database()->fetchCol('linked_entry_id', sprintf(
+				"
 					SELECT
 						f.linked_entry_id
 					FROM
-						`tbl_entries_data_{$field_id}` AS f
+						`tbl_entries_data_%s` AS f
 					WHERE
-						f.entry_id = '{$entry_id}'
-				")
-			);
+						f.entry_id = '%s'
+				",
+				$this->get('id'),
+				$entry_id
+			));
+			$entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
 			
-			foreach ($entries as $linked_entry_id) {
-				if (is_null($linked_entry_id)) continue;
-				
-				$entry = @current($entryManager->fetch($linked_entry_id, $this->get('linked_section_id')));
-				
+			foreach ($entries as $entry) {
 				if (!is_object($entry)) continue;
 				
-				$values = $entry->getData($this->get('linked_field_id'));
+				$values = $entry->getData($field_id);
 				
 				if (array_key_exists('linked_entry_id', $values)) {
 					$values = $values['linked_entry_id'];
@@ -85,7 +84,7 @@
 				
 				$values = array_diff($values, array($entry_id));
 				
-				$entry->setData($this->get('linked_field_id'), array(
+				$entry->setData($field_id, array(
 					'linked_entry_id'	=> $values
 				));
 				$entry->commit();
@@ -107,8 +106,8 @@
 			return $section->fetchFields();
 		}
 		
-		public function Linked(){
-			if(!($this->_linked_field instanceof StdClass)){
+		public function getLinkedField() {
+			if (!($this->_linked_field instanceof StdClass)) {
 				$this->_linked_field = (object)Symphony::Database()->fetchRow(0, 
 					"SELECT `allow_multiple` FROM `tbl_fields_bilink` WHERE `field_id` = ".$this->get('linked_field_id')." LIMIT 1"
 				);
@@ -118,7 +117,7 @@
 		}
 		
 		protected function isOneToManyRelationship() {
-			return (strcasecmp($this->Linked()->allow_multiple, 'no') === 0);
+			return (strcasecmp($this->getLinkedField()->allow_multiple, 'no') === 0);
 		}
 		
 	/*-------------------------------------------------------------------------
@@ -346,6 +345,7 @@
 		public function displayPublishPanel(&$wrapper, $data = null, $error = null, $prefix = null, $postfix = null, $entry_id = null) {
 			$this->_driver->addHeaders($this->_engine->Page);
 			$handle = $this->get('element_name'); $entry_ids = array();
+			$field_id = $this->get('id');
 			
 			if (!is_array($data['linked_entry_id']) and !is_null($data['linked_entry_id'])) {
 				$entry_ids = array($data['linked_entry_id']);
@@ -385,8 +385,6 @@
 			}
 			
 			else {
-				header('content-type: text/plain');
-				
 				$label = new XMLElement('h3', $this->get('label'));
 				$wrapper->appendChild($label);
 				
@@ -404,7 +402,6 @@
 				$section = $sectionManager->fetch($this->get('linked_section_id'));
 				$entryManager = new EntryManager($this->_engine);
 				$possible_entries = $entryManager->fetch(null, $this->get('linked_section_id'));
-				$linked_entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
 				$fields = array(); $first = null;
 				
 				if ($section) {
@@ -412,19 +409,29 @@
 					$first = array_shift($section->fetchVisibleColumns());
 				}
 				
-				$this->displayItem($ol, __('Empty'), -1, $entryManager->create(), $first, $fields);
+				$this->displayItem($ol, __('New'), -1, $entryManager->create(), $first, $fields);
 				
-				if ($linked_entries) {
-					foreach ($linked_entries as $index => $entry) {
-						unset($linked_entries[$index]);
-						$linked_entries[$entry->get('id')] = $entry;
-					}
-					
-					foreach ($entry_ids as $order => $linked_entry) {
-						if (!isset($linked_entries[$linked_entry])) continue;
-						
-						$entry = $linked_entries[$linked_entry];
+				if (self::$entries[$field_id]) {
+					foreach (self::$entries[$field_id] as $order => $entry) {
 						$this->displayItem($ol, __('None'), $order, $entry, $first, $fields);
+					}
+				}
+				
+				else {
+					$linked_entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
+					
+					if ($linked_entries) {
+						foreach ($linked_entries as $index => $entry) {
+							unset($linked_entries[$index]);
+							$linked_entries[$entry->get('id')] = $entry;
+						}
+						
+						foreach ($entry_ids as $order => $linked_entry) {
+							if (!isset($linked_entries[$linked_entry])) continue;
+							
+							$entry = $linked_entries[$linked_entry];
+							$this->displayItem($ol, __('None'), $order, $entry, $first, $fields);
+						}
 					}
 				}
 				
@@ -435,6 +442,10 @@
 				}
 				
 				$wrapper->appendChild($ol);
+				
+				if ($error != null) {
+					$wrapper = Widget::wrapFormElementWithError($wrapper, $error);
+				}
 			}
 		}
 		
@@ -505,61 +516,84 @@
 	-------------------------------------------------------------------------*/
 		
 		public function checkPostFieldData($data, &$error = null, $entry_id = null) {
-			if (!isset($data['entry']) or !is_array($data['entry'])) return self::__OK__;
-			
-			$entryManager = new EntryManager($this->_engine);
-			$fieldManager = new FieldManager($this->_engine);
-			$field = $fieldManager->fetch($this->get('linked_field_id'));
+			$field_id = $this->get('id');
 			$status = self::__OK__;
 			
-			// Create:
-			foreach ($data['entry'] as $index => $entry_data) {
-				$existing_id = (integer)$data['entry_id'][$index];
-				
-				if ($existing_id <= 0) {
-					$entry = $entryManager->create();
-					$entry->set('section_id', $this->get('linked_section_id'));
-					$entry->set('author_id', $this->_engine->Author->get('id'));
-					$entry->set('creation_date', DateTimeObj::get('Y-m-d H:i:s'));
-					$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
-				}
-				
-				else {
-					$entry = @current($entryManager->fetch($existing_id, $this->get('linked_section_id')));
-				}
-				
-				// Append correct linked data:
-				$existing_data = $entry->getData($this->get('linked_field_id'));
-				$existing_entries = array();
-				
-				if (isset($existing_data['linked_entry_id'])) {
-					if (!is_array($existing_data['linked_entry_id'])) {
-						$existing_entries[] = $existing_data['linked_entry_id'];
+			if ($this->get('allow_editing') != 'yes') {
+				return parent::checkPostFieldData($data, $error, $entry_id);
+			}
+			
+			else {
+				if (!isset($data['entry']) or !is_array($data['entry'])) {
+					if ($this->get('required') != 'yes') {
+						return self::__OK__;
 					}
 					
-					else foreach ($existing_data['linked_entry_id'] as $linked_entry_id) {
-						$existing_entries[] = $linked_entry_id;
-					}
-				}
-				
-				if (!in_array($entry_id, $existing_entries)) {
-					$existing_entries[] = $entry_id;
-				}
-				
-				$entry_data[$field->get('element_name')] = $existing_entries;
-				
-				// Validate:
-				if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $errors)) {
-					self::$errors[$entry_id][] = $errors;
+					$error = __(
+						"'%s' is a required field.", array(
+							$this->get('label')
+						)
+					);
 					
-					$status = self::__INVALID_FIELDS__;
+					return self::__INVALID_FIELDS__;
 				}
 				
-				else if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
-					$status = self::__INVALID_FIELDS__;
-				}
+				$entryManager = new EntryManager($this->_engine);
+				$fieldManager = new FieldManager($this->_engine);
+				$field = $fieldManager->fetch($this->get('linked_field_id'));
 				
-				self::$entries[$entry_id][] = $entry;
+				self::$errors[$field_id] = array();
+				self::$entries[$field_id] = array();
+				
+				// Create:
+				foreach ($data['entry'] as $index => $entry_data) {
+					$existing_id = (integer)$data['entry_id'][$index];
+					
+					if ($existing_id <= 0) {
+						$entry = $entryManager->create();
+						$entry->set('section_id', $this->get('linked_section_id'));
+						$entry->set('author_id', $this->_engine->Author->get('id'));
+						$entry->set('creation_date', DateTimeObj::get('Y-m-d H:i:s'));
+						$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
+					}
+					
+					else {
+						$entry = @current($entryManager->fetch($existing_id, $this->get('linked_section_id')));
+					}
+					
+					// Append correct linked data:
+					$existing_data = $entry->getData($this->get('linked_field_id'));
+					$existing_entries = array();
+					
+					if (isset($existing_data['linked_entry_id'])) {
+						if (!is_array($existing_data['linked_entry_id'])) {
+							$existing_entries[] = $existing_data['linked_entry_id'];
+						}
+						
+						else foreach ($existing_data['linked_entry_id'] as $linked_entry_id) {
+							$existing_entries[] = $linked_entry_id;
+						}
+					}
+					
+					if (!in_array($entry_id, $existing_entries)) {
+						$existing_entries[] = $entry_id;
+					}
+					
+					$entry_data[$field->get('element_name')] = $existing_entries;
+					
+					// Validate:
+					if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $errors)) {
+						self::$errors[$field_id][$index] = $errors;
+						
+						$status = self::__INVALID_FIELDS__;
+					}
+					
+					else if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
+						$status = self::__INVALID_FIELDS__;
+					}
+					
+					self::$entries[$field_id][$index] = $entry;
+				}
 			}
 			
 			return $status;
@@ -569,10 +603,10 @@
 			$field_id = $this->get('id');
 			$status = self::__OK__;
 			
-			if (!empty(self::$entries[$entry_id])) {
+			if (!empty(self::$entries[$field_id])) {
 				$data = array();
 				
-				foreach (self::$entries[$entry_id] as $entry) {
+				foreach (self::$entries[$field_id] as $entry) {
 					$entry->commit();
 					$data[] = $entry->get('id');
 				}
@@ -609,7 +643,7 @@
 			// We need to also remove any other entries linking to the selected 
 			// if the linked field is single select. This is to maintain any
 			// one-to-many or one-to-one relationships
-			if ($this->Linked()->allow_multiple == 'no') {
+			if ($this->getLinkedField()->allow_multiple == 'no') {
 				Symphony::Database()->query(sprintf(
 					"
 						DELETE FROM
