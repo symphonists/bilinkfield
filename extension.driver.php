@@ -5,8 +5,6 @@
 		Definition:
 	-------------------------------------------------------------------------*/
 		
-		// Doing a submodule test...
-		
 		public function about() {
 			return array(
 				'name'			=> 'Field: Bi Link',
@@ -28,6 +26,7 @@
 					`field_id` INT(11) UNSIGNED NOT NULL,
 					`linked_section_id` INT(11) UNSIGNED DEFAULT NULL,
 					`linked_field_id` INT(11) UNSIGNED DEFAULT NULL,
+					`allow_editing` ENUM('yes','no') DEFAULT NULL,
 					`allow_multiple` ENUM('yes','no') DEFAULT NULL,
 					`column_mode` ENUM('count','first-item','last-item','small-list','large-list') DEFAULT NULL,
 					PRIMARY KEY (`id`),

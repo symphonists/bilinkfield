@@ -65,12 +65,12 @@
 			));
 			$entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
 			
-			foreach ($entries as $entry) {
+			if ($entries) foreach ($entries as $entry) {
 				if (!is_object($entry)) continue;
 				
 				$values = $entry->getData($field_id);
 				
-				if (array_key_exists('linked_entry_id', $values)) {
+				if (is_array($values) and array_key_exists('linked_entry_id', $values)) {
 					$values = $values['linked_entry_id'];
 				}
 				
@@ -83,6 +83,10 @@
 				}
 				
 				$values = array_diff($values, array($entry_id));
+				
+				if (empty($values)) {
+					$values = null;
+				}
 				
 				$entry->setData($field_id, array(
 					'linked_entry_id'	=> $values
@@ -259,16 +263,19 @@
 			$field_id = $this->get('id');
 			$handle = $this->handle();
 			
-			$linked_field_id = $this->get('linked_field_id');
-			$linked_section_id = Symphony::Database()->fetchVar('parent_section', 0, "
-				SELECT
-					f.parent_section
-				FROM
-					`tbl_fields` AS f
-				WHERE
-					f.id = {$linked_field_id}
-				LIMIT 1
-			");
+			$linked_field_id = (integer)$this->get('linked_field_id');
+			$linked_section_id = Symphony::Database()->fetchVar('parent_section', 0, sprintf(
+				"
+					SELECT
+						f.parent_section
+					FROM
+						`tbl_fields` AS f
+					WHERE
+						f.id = %s
+					LIMIT 1
+				",
+				$linked_field_id
+			));
 			
 			$fields = array(
 				'field_id'			=> $this->get('id'),
@@ -411,17 +418,13 @@
 				
 				$this->displayItem($ol, __('New'), -1, $entryManager->create(), $first, $fields);
 				
-				header('content-type: text/plain');
-				
-				//var_dump(self::$errors); exit;
-				
 				if (self::$entries[$field_id]) {
 					foreach (self::$entries[$field_id] as $order => $entry) {
 						$this->displayItem($ol, __('None'), $order, $entry, $first, $fields);
 					}
 				}
 				
-				else {
+				else if ($entry_ids) {
 					$linked_entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
 					
 					if ($linked_entries) {
@@ -456,7 +459,7 @@
 		protected function displayItem($wrapper, $title, $order, $entry, $first, $fields) {
 			$handle = $this->get('element_name');
 			
-			if ($first) {
+			if ($first and $entry->getData($first->get('id'))) {
 				$new_title = $first->prepareTableValue(
 					$entry->getData($first->get('id'))
 				);
@@ -523,26 +526,8 @@
 			$field_id = $this->get('id');
 			$status = self::__OK__;
 			
-			header('content-type: text/plain');
-			
-			if ($this->get('allow_editing') != 'yes') {
-				return parent::checkPostFieldData($data, $error, $entry_id);
-			}
-			
-			else {
-				if (!isset($data['entry']) or !is_array($data['entry'])) {
-					if ($this->get('required') != 'yes') {
-						return self::__OK__;
-					}
-					
-					$error = __(
-						"'%s' is a required field.", array(
-							$this->get('label')
-						)
-					);
-					
-					return self::__INVALID_FIELDS__;
-				}
+			if (isset($data['entry']) and is_array($data['entry'])) {
+				header('content-type: text/plain');
 				
 				$entryManager = new EntryManager($this->_engine);
 				$fieldManager = new FieldManager($this->_engine);
@@ -561,6 +546,7 @@
 						$entry->set('author_id', $this->_engine->Author->get('id'));
 						$entry->set('creation_date', DateTimeObj::get('Y-m-d H:i:s'));
 						$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
+						$entry->assignEntryId();
 					}
 					
 					else {
@@ -591,15 +577,40 @@
 					if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $errors)) {
 						self::$errors[$field_id][$index] = $errors;
 						
-						//$status = self::__INVALID_FIELDS__;
+						$status = self::__INVALID_FIELDS__;
 					}
 					
 					else if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
-						//$status = self::__INVALID_FIELDS__;
+						$status = self::__INVALID_FIELDS__;
+					}
+					
+					// Cleanup dud entry:
+					if ($existing_id == 0 and $status == self::__INVALID_FIELDS__) {
+						$existing_id = $entry->get('id');
+						
+						Symphony::Database()->delete('tbl_entries', " `id` = '$existing_id' ");
 					}
 					
 					self::$entries[$field_id][$index] = $entry;
 				}
+			}
+			
+			else if (is_array($data)) {
+				return parent::checkPostFieldData($data, $error, $entry_id);
+			}
+			
+			else {
+				if ($this->get('required') != 'yes') {
+					return self::__OK__;
+				}
+				
+				$error = __(
+					"'%s' is a required field.", array(
+						$this->get('label')
+					)
+				);
+				
+				return self::__MISSING_FIELDS__;
 			}
 			
 			return $status;
@@ -610,8 +621,6 @@
 			$status = self::__OK__;
 			
 			if (!empty(self::$entries[$field_id])) {
-				$status = self::__INVALID_FIELDS__;
-				return null;
 				$data = array();
 				
 				foreach (self::$entries[$field_id] as $entry) {
@@ -704,6 +713,10 @@
 					$values = $values[0];
 				}
 				
+				if (empty($values)) {
+					$values = null;
+				}
+				
 				$entry->setData($this->get('linked_field_id'), array(
 					'linked_entry_id'	=> $values
 				));
@@ -739,10 +752,14 @@
 				
 				// This ensures that the MySQL::insert() function does not
 				// end up creating invalid SQL (bug with Symphony <= 2.0.6)
-				if(count($values) == 1){
+				if (count($values) == 1) {
 					$values = array_values($values);
 					$values = $values[0];
-				}	
+				}
+				
+				if (empty($values)) {
+					$values = null;
+				}
 				
 				$entry->setData($this->get('linked_field_id'), array(
 					'linked_entry_id'	=> $values
@@ -756,6 +773,10 @@
 			if (!in_array($entry_id, $values)) $values[] = $entry_id;
 			
 			if ($entry) {
+				if (empty($values)) {
+					$values = null;
+				}
+				
 				$entry->setData($this->get('linked_field_id'), array(
 					'linked_entry_id'	=> $values
 				));
