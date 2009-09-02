@@ -529,7 +529,11 @@
 	-------------------------------------------------------------------------*/
 		
 		public function checkPostFieldData($data, &$error = null, $entry_id = null) {
-			header('content-type: text/plain');
+			@header('content-type: text/plain');
+			
+			//debug_print_backtrace();
+			var_export($data);
+			exit;
 			
 			if (isset($data['entry']) and is_array($data['entry'])) {
 				$entryManager = new EntryManager($this->_engine);
@@ -596,8 +600,13 @@
 						Symphony::Database()->delete('tbl_entries', " `id` = '$existing_id' ");
 					}
 					
+					var_export($entry_data);
+					echo "\n";
+					
 					self::$entries[$field_id][$index] = $entry;
 				}
+				
+				var_dump(self::$errors); exit;
 				
 				return $status;
 			}
