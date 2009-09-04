@@ -524,7 +524,16 @@
 					$field->set('allow_editing', 'no');
 				}
 				
-				$field->displayPublishPanel($container, $data, $error, $name, $postfix, $entry->get('id'));
+				$div = new XMLElement('div');
+				$div->setAttribute('class', sprintf(
+					'field field-%s%s',
+					$field->handle(),
+					($field->get('required') == 'yes' ? ' required' : '')
+				));
+				
+				$field->displayPublishPanel($div, $data, $error, $name, $postfix, $entry->get('id'));
+				
+				$container->appendChild($div);
 			}
 			
 			if ($this->get('location') == 'main') {
