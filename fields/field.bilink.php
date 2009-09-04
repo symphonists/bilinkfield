@@ -566,9 +566,17 @@
 					$existing_id = (integer)$data['entry_id'][$index];
 					
 					if ($existing_id <= 0) {
+						if ($this->_engine->Author) {
+							$author_id = $this->_engine->Author->get('id');
+						}
+						
+						else {
+							$author_id = '1';
+						}
+						
 						$entry = $entryManager->create();
 						$entry->set('section_id', $this->get('linked_section_id'));
-						$entry->set('author_id', $this->_engine->Author->get('id'));
+						$entry->set('author_id', $author_id);
 						$entry->set('creation_date', DateTimeObj::get('Y-m-d H:i:s'));
 						$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
 						$entry->assignEntryId();
