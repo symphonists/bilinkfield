@@ -631,12 +631,18 @@
 			$result = array();
 			
 			if (!empty(self::$entries[$field_id])) {
-				$data = array();
+				$new_data = array();
+				
+				if (is_array($data)) foreach ($data as $item) {
+					if (!is_array($item)) $new_data[] = $item;
+				}
 				
 				foreach (self::$entries[$field_id] as $entry) {
 					$entry->commit();
-					$data[] = $entry->get('id');
+					$new_data[] = $entry->get('id');
 				}
+				
+				$data = $new_data;
 			}
 			
 			if (empty($data)) {
