@@ -65,7 +65,6 @@
 		public function addHeaders($page) {
 			if (!$this->addedHeaders) {
 				$page->addScriptToHead(URL . '/extensions/bilinkfield/assets/publish.js', 123269781);
-				$page->addStylesheetToHead(URL . '/extensions/bilinkfield/assets/publish.css', 'screen', 123269781);
 				
 				$this->addedHeaders = true;
 			}

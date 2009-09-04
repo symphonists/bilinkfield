@@ -347,6 +347,10 @@
 					$entry->getData($field->get('id'))
 				);
 				
+				if ($value instanceof XMLElement) {
+					$value = $value->generate();
+				}
+				
 				$options[] = array(
 					$entry->get('id'), $selected, $value
 				);
@@ -399,6 +403,7 @@
 			
 			else {
 				$label = new XMLElement('h3', $this->get('label'));
+				$label->setAttribute('class', 'label');
 				$wrapper->appendChild($label);
 				
 				$ol = new XMLElement('ol');
@@ -422,11 +427,11 @@
 					$first = array_shift($section->fetchVisibleColumns());
 				}
 				
-				$this->displayItem($ol, __('New'), -1, $entryManager->create(), $first, $fields);
+				$this->displayItem($ol, __('New'), -1, $entryManager->create(), $first, $fields, $prefix, $postfix);
 				
 				if (self::$entries[$field_id]) {
 					foreach (self::$entries[$field_id] as $order => $entry) {
-						$this->displayItem($ol, __('None'), $order, $entry, $first, $fields);
+						$this->displayItem($ol, __('None'), $order, $entry, $first, $fields, $prefix, $postfix);
 					}
 				}
 				
@@ -443,7 +448,7 @@
 							if (!isset($linked_entries[$linked_entry])) continue;
 							
 							$entry = $linked_entries[$linked_entry];
-							$this->displayItem($ol, __('None'), $order, $entry, $first, $fields);
+							$this->displayItem($ol, __('None'), $order, $entry, $first, $fields, $prefix, $postfix);
 						}
 					}
 				}
@@ -451,7 +456,7 @@
 				if ($possible_entries) foreach ($possible_entries as $order => $entry) {
 					if (is_array($entry_ids) and in_array($entry->get('id'), $entry_ids)) continue;
 					
-					$this->displayItem($ol, __('None'), -1, $entry, $first, $fields);
+					$this->displayItem($ol, __('None'), -1, $entry, $first, $fields, $prefix, $postfix);
 				}
 				
 				$wrapper->appendChild($ol);
@@ -462,13 +467,17 @@
 			}
 		}
 		
-		protected function displayItem($wrapper, $title, $order, $entry, $first, $fields) {
+		protected function displayItem($wrapper, $title, $order, $entry, $first, $fields, $prefix, $postfix) {
 			$handle = $this->get('element_name');
 			
 			if ($first and $entry->getData($first->get('id'))) {
 				$new_title = $first->prepareTableValue(
 					$entry->getData($first->get('id'))
 				);
+				
+				if ($new_title instanceof XMLElement) {
+					$new_title = $new_title->generate();
+				}
 				
 				if ($new_title != '') $title = $new_title;
 			}
@@ -477,7 +486,7 @@
 			$item->appendChild(new XMLElement('h4', $title));
 			
 			$input = Widget::Input(
-				"fields[{$handle}][entry_id][{$order}]",
+				"fields{$prefix}[{$handle}][entry_id][{$order}]",
 				$entry->get('id')
 			);
 			$input->setAttribute('type', 'hidden');
@@ -495,7 +504,7 @@
 			foreach ($fields as $field) {
 				if ($field->get('linked_section_id') == $this->get('parent_section')) continue;
 				
-				$name = "[{$handle}][entry][{$order}]";
+				$name = "{$prefix}[{$handle}][entry][{$order}]";
 				$data = $entry->getData($field->get('id'));
 				$error = self::$errors[$this->get('id')][$order][$field->get('id')];
 				
@@ -511,7 +520,11 @@
 					$container = $right;
 				}
 				
-				$field->displayPublishPanel($container, $data, $error, $name, null, $entry->get('id'));
+				if ($field->get('type') == 'bilink') {
+					$field->set('allow_editing', 'no');
+				}
+				
+				$field->displayPublishPanel($container, $data, $error, $name, $postfix, $entry->get('id'));
 			}
 			
 			if ($this->get('location') == 'main') {
@@ -853,6 +866,11 @@
 					$value = $field->prepareTableValue(
 						$entry->getData($field->get('id'))
 					);
+					
+					if ($value instanceof XMLElement) {
+						$value = $value->generate();
+					}
+					
 					$handle = Lang::createHandle($value);
 					
 					$item = new XMLElement('item', General::sanitize($value));
