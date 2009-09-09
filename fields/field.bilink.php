@@ -618,8 +618,9 @@
 					}
 					
 					// Cleanup dud entry:
-					if ($existing_id == 0 and $status == self::__INVALID_FIELDS__) {
+					if ($existing_id == 0 and $status != self::__OK__) {
 						$existing_id = $entry->get('id');
+						$entry->set('id', 0);
 						
 						Symphony::Database()->delete('tbl_entries', " `id` = '$existing_id' ");
 					}
@@ -646,6 +647,8 @@
 				}
 				
 				foreach (self::$entries[$field_id] as $entry) {
+					if ($entry->get('id') == 0) continue;
+					
 					$entry->commit();
 					$new_data[] = $entry->get('id');
 				}
@@ -864,15 +867,16 @@
 			$list->setAttribute('entries', count($data['linked_entry_id']));
 			
 			// No section or relations:
-			if (empty($section) or @empty($data['linked_entry_id'][0])) {
+			if (empty($section)) {
 				$list->setAttribute('entries', 0);
 				$wrapper->appendChild($list);
-				
 				return;
 			}
 			
+			if ($mode == null) $mode = 'items';
+			
 			// List:
-			if ($mode == null or $mode == 'items') {
+			if ($mode == 'items') {
 				$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
 				$list->appendChild(new XMLElement(
 					'section', $section->get('name'),
