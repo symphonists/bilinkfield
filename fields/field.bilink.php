@@ -550,13 +550,13 @@
 		Input:
 	-------------------------------------------------------------------------*/
 		
-		public function checkPostFieldData($data, &$error = null, $entry_id = null) {
+		public function checkPostFieldData($data, XMLElement $status_xml, $entry_id = null) {
 			if (isset($data['entry']) and is_array($data['entry'])) {
 				$entryManager = new EntryManager($this->_engine);
 				$fieldManager = new FieldManager($this->_engine);
 				$field = $fieldManager->fetch($this->get('linked_field_id'));
 				$field_id = $this->get('id');
-				$status = self::__OK__;
+				$success = true;
 				
 				self::$errors[$field_id] = array();
 				self::$entries[$field_id] = array();
@@ -564,6 +564,8 @@
 				// Create:
 				foreach ($data['entry'] as $index => $entry_data) {
 					$existing_id = (integer)$data['entry_id'][$index];
+					$entry_xml = new XMLElement('item');
+					$entry_xml->setAttribute('index', $index + 1);
 					
 					if ($existing_id <= 0) {
 						if ($this->_engine->Author) {
@@ -607,14 +609,16 @@
 					$entry_data[$field->get('element_name')] = $existing_entries;
 					
 					// Validate:
-					if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $errors)) {
+					if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $entry_xml)) {
 						self::$errors[$field_id][$index] = $errors;
 						
-						$status = self::__INVALID_FIELDS__;
+						$status_xml->setAttribute('state', 'error');
+						$success = false;
 					}
 					
 					else if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
-						$status = self::__INVALID_FIELDS__;
+						$status_xml->setAttribute('state', 'error');
+						$success = false;
 					}
 					
 					// Cleanup dud entry:
@@ -626,12 +630,14 @@
 					}
 					
 					self::$entries[$field_id][$index] = $entry;
+					
+					$status_xml->appendChild($entry_xml);
 				}
 				
-				return $status;
+				return $success;
 			}
 			
-			return parent::checkPostFieldData($data, $error, $entry_id);
+			return parent::checkPostFieldData($data, $status_xml, $entry_id);
 		}
 		
 		public function processRawFieldData($data, &$status, $simulate = false, $entry_id = null) {
