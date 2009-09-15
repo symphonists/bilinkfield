@@ -861,6 +861,15 @@
 			$linked_section_id = $this->get('linked_section_id');
 			$section = $sectionManager->fetch($linked_section_id);
 			$data = $this->prepareData($data);
+			$entry_ids = array();
+			
+			if (!is_array($data['linked_entry_id']) and !is_null($data['linked_entry_id'])) {
+				$entry_ids = array($data['linked_entry_id']);
+			}
+			
+			else {
+				$entry_ids = $data['linked_entry_id'];
+			}
 			
 			$list = new XMLElement($this->get('element_name'));
 			$list->setAttribute('mode', $mode);
@@ -877,7 +886,7 @@
 			
 			// List:
 			if ($mode == 'items') {
-				$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
+				$entries = $entryManager->fetch($entry_ids, $linked_section_id);
 				$list->appendChild(new XMLElement(
 					'section', $section->get('name'),
 					array(
@@ -887,9 +896,15 @@
 				));
 				$field = @current($section->fetchVisibleColumns());
 				
-				foreach ($entries as $count => $entry) {
-					if (empty($entry)) continue;
+				foreach ($entries as $index => $entry) {
+					unset($entries[$index]);
+					$entries[$entry->get('id')] = $entry;
+				}
+				
+				foreach ($entry_ids as $order => $entry) {
+					if (!isset($entries[$entry]) or empty($entries[$entry])) continue;
 					
+					$entry = $entries[$entry];
 					$value = $field->prepareTableValue(
 						$entry->getData($field->get('id'))
 					);
@@ -910,7 +925,7 @@
 			
 			// Full:
 			else if ($mode == 'entries') {
-				$entries = $entryManager->fetch($data['linked_entry_id'], $linked_section_id);
+				$entries = $entryManager->fetch($entry_ids, $linked_section_id);
 				$list->appendChild(new XMLElement(
 					'section', $section->get('name'),
 					array(
@@ -919,7 +934,15 @@
 					)
 				));
 				
-				foreach ($entries as $count => $entry) {
+				foreach ($entries as $index => $entry) {
+					unset($entries[$index]);
+					$entries[$entry->get('id')] = $entry;
+				}
+				
+				foreach ($entry_ids as $order => $entry) {
+					if (!isset($entries[$entry]) or empty($entries[$entry])) continue;
+					
+					$entry = $entries[$entry];
 					$associated = $entry->fetchAllAssociatedEntryCounts();
 					$data = $entry->getData();
 					
