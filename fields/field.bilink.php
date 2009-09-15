@@ -609,14 +609,14 @@
 					$entry_data[$field->get('element_name')] = $existing_entries;
 					
 					// Validate:
-					if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $entry_xml)) {
+					if (!$entry->checkPostData($entry_data, $entry_xml)) {
 						self::$errors[$field_id][$index] = $errors;
 						
 						$status_xml->setAttribute('state', 'error');
 						$success = false;
 					}
 					
-					else if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
+					else if (!$entry->setDataFromPost($entry_data, $entry_xml)) {
 						$status_xml->setAttribute('state', 'error');
 						$success = false;
 					}
@@ -642,7 +642,6 @@
 		
 		public function processRawFieldData($data, &$status, $simulate = false, $entry_id = null) {
 			$field_id = $this->get('id');
-			$status = self::__OK__;
 			$result = array();
 			
 			if (!empty(self::$entries[$field_id])) {
