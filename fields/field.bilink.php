@@ -825,10 +825,10 @@
 		
 		public function getParameterPoolValue($data) {
 			if (!is_array($data['linked_entry_id'])) {
-				$data['linked_entry_id'] = array($data['linked_entry_id']);
+				return array($data['linked_entry_id']);
 			}
 			
-			return implode(', ', $data['linked_entry_id']);
+			return $data['linked_entry_id'];
 		}
 		
 		public function fetchIncludableElements() {
@@ -840,6 +840,12 @@
 		}
 		
 		public function prepareData($data) {
+			if (!isset($data['linked_entry_id'])) {
+				return array(
+					'linked_entry_id'	=> array()
+				);
+			}
+			
 			if (!is_array($data['linked_entry_id'])) {
 				$data['linked_entry_id'] = array($data['linked_entry_id']);
 			}
