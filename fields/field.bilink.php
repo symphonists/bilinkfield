@@ -323,8 +323,24 @@
 			$sectionManager = new SectionManager($this->_engine);
 			$section = $sectionManager->fetch($this->get('linked_section_id'));
 			$entryManager = new EntryManager($this->_engine);
-			$entries = $entryManager->fetch(null, $this->get('linked_section_id'));
+			$count = $entryManager->fetchCount($this->get('linked_section_id'));
 			$options = array();
+			
+			if ($count > 25) {
+				if (!empty($entry_ids)) {
+					$linked_entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
+				}
+				
+				$entries = $entryManager->fetch(null, $this->get('linked_section_id'), 25);
+				
+				if (isset($linked_entries) and is_array($linked_entries)) {
+					$entries = array_merge($entries, $linked_entries);
+				}
+			}
+			
+			else {
+				$entries = $entryManager->fetch(null, $this->get('linked_section_id'));
+			}
 			
 			if (!is_object($section) or empty($entries)) return $options;
 			
@@ -419,7 +435,7 @@
 				$sectionManager = new SectionManager($this->_engine);
 				$section = $sectionManager->fetch($this->get('linked_section_id'));
 				$entryManager = new EntryManager($this->_engine);
-				$possible_entries = $entryManager->fetch(null, $this->get('linked_section_id'));
+				$possible_entries = $entryManager->fetch(null, $this->get('linked_section_id'), 25);
 				$fields = array(); $first = null;
 				
 				if ($section) {
@@ -483,7 +499,7 @@
 			}
 			
 			$item = new XMLElement('li');
-			$item->appendChild(new XMLElement('h4', $title));
+			$item->appendChild(new XMLElement('h4', strip_tags($title)));
 			
 			$input = Widget::Input(
 				"fields{$prefix}[{$handle}][entry_id][{$order}]",
@@ -613,7 +629,7 @@
 						$status = self::__INVALID_FIELDS__;
 					}
 					
-					else if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
+					if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
 						$status = self::__INVALID_FIELDS__;
 					}
 					
