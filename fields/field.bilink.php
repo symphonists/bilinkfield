@@ -993,7 +993,7 @@
 						
 						if ($field->get('type') == $this->get('type')) continue;
 						
-						$field->appendFormattedElement($item, $values, false, $mode);
+						$field->appendFormattedElement($item, $values, false);
 					}
 					
 					$list->appendChild($item);
