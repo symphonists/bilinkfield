@@ -882,7 +882,7 @@
 			$list->setAttribute('entries', count($data['linked_entry_id']));
 			
 			// No section or relations:
-			if (empty($section)) {
+			if (!is_object($section)) {
 				$list->setAttribute('entries', 0);
 				$wrapper->appendChild($list);
 				return;
