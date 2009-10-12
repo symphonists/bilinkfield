@@ -1020,7 +1020,7 @@
 				$field = current($section->fetchVisibleColumns());
 				$data = $this->prepareData($data);
 				
-				if (!is_null($field)) { 
+				if (!is_null($field) and $data['linked_entry_id']) {
 					if ($this->get('column_mode') != 'count') {
 						if ($this->get('column_mode') == 'last-item') {
 							$order = 'ASC';
