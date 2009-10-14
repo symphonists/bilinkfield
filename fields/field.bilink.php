@@ -928,13 +928,16 @@
 					
 					$entry = $entries[$entry];
 					$value = $field->prepareTableValue(
-						$entry->getData($field->get('id'))
+						$entry->getData($field->get('id')),
+						new XMLElement('span'),
+						$entry_id
 					);
 					
 					if ($value instanceof XMLElement) {
 						$value = $value->generate();
 					}
 					
+					$value = strip_tags($value);
 					$handle = Lang::createHandle($value);
 					
 					$item = new XMLElement('item', General::sanitize($value));
@@ -1012,7 +1015,7 @@
 			$custom_link = null; $more_link = null;
 			
 			// Not setup correctly:
-			if (!$section instanceof Section) {
+			if (!$section instanceof Section or !$linked) {
 				return parent::prepareTableValue(array(), $link, $entry_id);
 			}
 			
