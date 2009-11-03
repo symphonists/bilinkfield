@@ -993,7 +993,7 @@
 						
 						if ($field->get('type') == $this->get('type')) continue;
 						
-						$field->appendFormattedElement($item, $values, false);
+						$field->appendFormattedElement($item, $values, false, null);
 					}
 					
 					$list->appendChild($item);
@@ -1016,7 +1016,7 @@
 				return parent::prepareTableValue(array(), $link, $entry_id);
 			}
 			
-			if ($section instanceof Section) {
+			if (!empty($data['linked_entry_id'])) {
 				$field = current($section->fetchVisibleColumns());
 				$data = $this->prepareData($data);
 				
