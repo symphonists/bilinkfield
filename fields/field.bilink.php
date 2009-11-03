@@ -898,7 +898,7 @@
 			$list->setAttribute('entries', count($data['linked_entry_id']));
 			
 			// No section or relations:
-			if (empty($section)) {
+			if (!is_object($section)) {
 				$list->setAttribute('entries', 0);
 				$wrapper->appendChild($list);
 				return;
@@ -928,13 +928,16 @@
 					
 					$entry = $entries[$entry];
 					$value = $field->prepareTableValue(
-						$entry->getData($field->get('id'))
+						$entry->getData($field->get('id')),
+						new XMLElement('span'),
+						$entry_id
 					);
 					
 					if ($value instanceof XMLElement) {
 						$value = $value->generate();
 					}
 					
+					$value = strip_tags($value);
 					$handle = Lang::createHandle($value);
 					
 					$item = new XMLElement('item', General::sanitize($value));
@@ -1012,7 +1015,7 @@
 			$custom_link = null; $more_link = null;
 			
 			// Not setup correctly:
-			if (!$section instanceof Section) {
+			if (!$section instanceof Section or !$linked) {
 				return parent::prepareTableValue(array(), $link, $entry_id);
 			}
 			
@@ -1020,7 +1023,7 @@
 				$field = current($section->fetchVisibleColumns());
 				$data = $this->prepareData($data);
 				
-				if (!is_null($field)) { 
+				if (!is_null($field) and $data['linked_entry_id']) {
 					if ($this->get('column_mode') != 'count') {
 						if ($this->get('column_mode') == 'last-item') {
 							$order = 'ASC';
