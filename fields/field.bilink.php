@@ -319,27 +319,28 @@
 		Publish:
 	-------------------------------------------------------------------------*/
 		
-		public function findEntries($entry_ids, $current_entry_id = null) {
+		public function findEntries($entry_ids, $current_entry_id = null, $limit = 50) {
 			$sectionManager = new SectionManager($this->_engine);
 			$section = $sectionManager->fetch($this->get('linked_section_id'));
 			$entryManager = new EntryManager($this->_engine);
 			$count = $entryManager->fetchCount($this->get('linked_section_id'));
-			$options = array();
+			$entries = $entryManager->fetch(null, $this->get('linked_section_id'), $limit);
+			$options = array(); $entry_ids = array_unique($entry_ids);
 			
-			if ($count > 25) {
-				if (!empty($entry_ids)) {
-					$linked_entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
+			if ($count > $limit) {
+				$remove_ids = $extra_ids = array();
+				
+				foreach ($entries as $entry) if (in_array($entry->get('id'), $entry_ids)) {
+					$remove_ids[] = $entry->get('id');
 				}
 				
-				$entries = $entryManager->fetch(null, $this->get('linked_section_id'), 25);
+				$extra_ids = array_diff($entry_ids, $remove_ids);
 				
-				if (isset($linked_entries) and is_array($linked_entries)) {
-					$entries = array_merge($entries, $linked_entries);
+				if (!empty($extra_ids)) {
+					$extra_entries = $entryManager->fetch($extra_ids, $this->get('linked_section_id'));
+					
+					if (is_array($extra_entries)) $entries = array_merge($entries, $extra_entries);
 				}
-			}
-			
-			else {
-				$entries = $entryManager->fetch(null, $this->get('linked_section_id'));
 			}
 			
 			if (!is_object($section) or empty($entries)) return $options;
