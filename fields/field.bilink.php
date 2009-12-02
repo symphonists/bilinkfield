@@ -901,19 +901,18 @@
 			
 			$list = new XMLElement($this->get('element_name'));
 			$list->setAttribute('mode', $mode);
-			$list->setAttribute('entries', count($data['linked_entry_id']));
 			
 			// No section or relations:
-			if (!is_object($section)) {
+			if (!is_object($section) or empty($entry_ids)) {
 				$list->setAttribute('entries', 0);
 				$wrapper->appendChild($list);
 				return;
 			}
 			
-			if ($mode == null) $mode = 'items';
-			
 			$entries = $entryManager->fetch($entry_ids, $linked_section_id);
 			$list->setAttribute('entries', count($entries));
+			
+			if ($mode == null) $mode = 'items';
 			
 			// List:
 			if ($mode == 'items') {
