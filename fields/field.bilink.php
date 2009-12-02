@@ -320,6 +320,11 @@
 	-------------------------------------------------------------------------*/
 		
 		public function findEntries($entry_ids, $current_entry_id = null, $limit = 50) {
+			if (!is_array($entry_ids)) {
+				if (is_null($entry_ids)) $entry_ids = array();
+				else $entry_ids = array($entry_ids);
+			}
+			
 			$sectionManager = new SectionManager($this->_engine);
 			$section = $sectionManager->fetch($this->get('linked_section_id'));
 			$entryManager = new EntryManager($this->_engine);
@@ -907,9 +912,11 @@
 			
 			if ($mode == null) $mode = 'items';
 			
+			$entries = $entryManager->fetch($entry_ids, $linked_section_id);
+			$list->setAttribute('entries', count($entries));
+			
 			// List:
 			if ($mode == 'items') {
-				$entries = $entryManager->fetch($entry_ids, $linked_section_id);
 				$list->appendChild(new XMLElement(
 					'section', $section->get('name'),
 					array(
@@ -951,7 +958,6 @@
 			
 			// Full:
 			else if ($mode == 'entries') {
-				$entries = $entryManager->fetch($entry_ids, $linked_section_id);
 				$list->appendChild(new XMLElement(
 					'section', $section->get('name'),
 					array(
