@@ -46,7 +46,7 @@
 		}
 		
 		public function update($previousVersion) {
-			if (version_compare($previousVersion, '1.0.14', '<=')) {
+			if (version_compare($previousVersion, '1.0.14', '<')) {
 				Symphony::Database()->query("
 					ALTER TABLE `tbl_fields_bilink`
 					ADD COLUMN `allow_editing` ENUM('yes','no') DEFAULT 'no';
