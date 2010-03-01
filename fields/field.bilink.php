@@ -463,17 +463,18 @@
 
 				else if ($entry_ids) {
 					$linked_entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
-
+					$sorted_entries = array();
+					
 					if ($linked_entries) {
 						foreach ($linked_entries as $index => $entry) {
 							unset($linked_entries[$index]);
-							$linked_entries[$entry->get('id')] = $entry;
+							$sorted_entries[$entry->get('id')] = $entry;
 						}
-
+						
 						foreach ($entry_ids as $order => $linked_entry) {
-							if (!isset($linked_entries[$linked_entry])) continue;
-
-							$entry = $linked_entries[$linked_entry];
+							if (!isset($sorted_entries[$linked_entry])) continue;
+							
+							$entry = $sorted_entries[$linked_entry];
 							$this->displayItem($ol, __('None'), $order, $entry, $first, $fields, $prefix, $postfix);
 						}
 					}
@@ -928,12 +929,16 @@
 					)
 				));
 				$field = @current($section->fetchVisibleColumns());
-
+				
+				$sorted_entries = array();
+				
 				foreach ($entries as $index => $entry) {
 					unset($entries[$index]);
-					$entries[$entry->get('id')] = $entry;
+					$sorted_entries[$entry->get('id')] = $entry;
 				}
-
+				
+				$entries = $sorted_entries;
+				
 				foreach ($entry_ids as $order => $entry) {
 					if (!isset($entries[$entry]) or empty($entries[$entry])) continue;
 
@@ -968,12 +973,16 @@
 						'handle'	=> $section->get('handle')
 					)
 				));
-
+				
+				$sorted_entries = array();
+				
 				foreach ($entries as $index => $entry) {
 					unset($entries[$index]);
-					$entries[$entry->get('id')] = $entry;
+					$sorted_entries[$entry->get('id')] = $entry;
 				}
-
+				
+				$entries = $sorted_entries;
+				
 				foreach ($entry_ids as $order => $entry) {
 					if (!isset($entries[$entry]) or empty($entries[$entry])) continue;
 
