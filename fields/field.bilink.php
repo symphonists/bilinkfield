@@ -241,7 +241,7 @@
 				");
 			}else{
 				$linked_field_id = NULL;
-				$linked_sectio_id = NULL;
+				$linked_section_id = NULL;
 			}
 
 			$fields = array(
