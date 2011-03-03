@@ -1,7 +1,7 @@
 <?php
-
+	
 	if (!defined('__IN_SYMPHONY__')) die('<h2>Symphony Error</h2><p>You cannot directly access this file</p>');
-
+	
 	class FieldBiLink extends Field {
 		protected $_driver = null;
 		public $_ignore = array();
@@ -9,25 +9,25 @@
 		static public $errors = array();
 		static public $entries = array();
 		protected $is_fail = true;
-
+		
 	/*-------------------------------------------------------------------------
 		Definition:
 	-------------------------------------------------------------------------*/
-
+		
 		public function __construct(&$parent) {
 			parent::__construct($parent);
-
+			
 			$this->_name = 'Bi-Link';
 			$this->_required = true;
 			$this->_driver = Symphony::ExtensionManager()->create('bilinkfield');
-
+			
 			// Set defaults:
 			$this->set('show_column', 'yes');
 		}
-
+		
 		public function createTable() {
 			$field_id = $this->get('id');
-
+			
 			return Symphony::Database()->query("
 				CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$field_id}` (
 					`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -39,7 +39,7 @@
 				)
 			");
 		}
-
+		
 		public function canFilter() {
 			return true;
 		}
@@ -127,57 +127,54 @@
 	/*-------------------------------------------------------------------------
 		Settings:
 	-------------------------------------------------------------------------*/
-
+		
 		public function findDefaults(&$fields) {
 			if (!isset($fields['allow_editing'])) $fields['allow_editing'] = 'no';
 			if (!isset($fields['allow_multiple'])) $fields['allow_multiple'] = 'yes';
 			if (!isset($fields['column_size'])) $fields['column_size'] = 'medium';
 		}
-
+		
 		public function findOptions() {
 			$sectionManager = new SectionManager(Symphony::Engine());
 		  	$sections = $sectionManager->fetch(null, 'ASC', 'name');
 			$groups = $options = array();
-
+			
 			if (is_array($sections) and !empty($sections)) {
 				foreach ($sections as $section) {
 					$groups[$section->get('id')] = array(
-						'fields'	=> $section->fetchFields(),
-						'section'	=> $section
+						'fields'	=> $section->fetchFields('bilink'),
+						'section'	=> $section->get('name')
 					);
 				}
 			}
-
+			
 			$options[] = array('', '', __('None'));
-
+			
 			foreach ($groups as $group) {
 				if (!is_array($group['fields'])) continue;
-
+				
 				$fields = array();
-
+				
 				foreach ($group['fields'] as $field) {
-					if (
-						$field->get('type') == 'bilink'
-						and $field->get('id') != $this->get('id')
-					) {
+					if ($field->get('id') != $this->get('id')) {
 						$selected = $this->get('linked_field_id') == $field->get('id');
 						$fields[] = array(
 							$field->get('id'), $selected, $field->get('label')
 						);
 					}
 				}
-
+				
 				if (empty($fields)) continue;
-
+				
 				$options[] = array(
-					'label'		=> $group['section']->get('name'),
+					'label'		=> $group['section'],
 					'options'	=> $fields
 				);
 			}
-
+			
 			return $options;
 		}
-
+		
 		public function findModes() {
 			$modes = array(
 				array('count', false, 'Entry Count'),
