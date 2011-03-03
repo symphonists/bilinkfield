@@ -1060,19 +1060,17 @@
 				$field = current($section->fetchVisibleColumns());
 				$data = $this->prepareData($data);
 
-				if (!is_null($field) and $data['linked_entry_id']) {
+				if (!is_null($field) && $data['linked_entry_id']) {
 					if ($this->get('column_mode') != 'count') {
 						if ($this->get('column_mode') == 'last-item') {
-							$order = 'ASC';
+							$data['linked_entry_id'] = array_reverse($data['linked_entry_id']);
 						}
-
-						else {
-							$order = 'DESC';
-						}
-
-						$entryManager->setFetchSorting('date', $order);
-						$entries = $entryManager->fetch($data['linked_entry_id'], $this->get('linked_section_id'), 1);
-
+						
+						$entries = $entryManager->fetch(
+							current($data['linked_entry_id']),
+							$this->get('linked_section_id'), 1
+						);
+						
 						if (is_array($entries) and !empty($entries)) {
 							$entry = current($entries);
 							$value = $field->prepareTableValue(
@@ -1088,13 +1086,13 @@
 									$entry->get('id')
 								)
 							);
-
+							
 							if ($value instanceof XMLElement) {
 								$value = $value->generate();
 							}
-
+							
 							$custom_link->setValue(strip_tags($value));
-
+							
 							$more_link = new XMLElement('a');
 							$more_link->setValue(__('more →'));
 							$more_link->setAttribute(
@@ -1108,14 +1106,14 @@
 							);
 						}
 					}
-
+					
 					else {
 						$joins = null; $where = null;
-
+						
 						$linked->buildDSRetrivalSQL(array($entry_id), $joins, $where, false);
-
+						
 						$count = $entryManager->fetchCount($this->get('linked_section_id'), $where, $joins);
-
+						
 						if ($count > 0) {
 							$custom_link = new XMLElement('a');
 							$custom_link->setValue($count . __(' →'));
@@ -1131,7 +1129,7 @@
 					}
 				}
 			}
-
+			
 			if (is_null($custom_link)) {
 				$custom_link = new XMLElement('a');
 				$custom_link->setValue(__('0 →'));
@@ -1144,7 +1142,7 @@
 						$entry_id
 					)
 				);
-
+				
 				if ($this->get('column_mode') != 'count') {
 					$more_link = $custom_link;
 					$more_link->setValue(__('more →'));
@@ -1154,13 +1152,13 @@
 					$custom_link->setValue(__('None'));
 				}
 			}
-
+			
 			if ($link) {
 				$link->setValue($custom_link->getValue());
-
+				
 				return $link->generate();
 			}
-
+			
 			if ($this->get('column_mode') != 'count') {
 				$wrapper = new XMLElement('span');
 				$wrapper->setValue(
@@ -1170,10 +1168,10 @@
 						$more_link->generate()
 					)
 				);
-
+				
 				return $wrapper;
 			}
-
+			
 			return $custom_link;
 		}
 
