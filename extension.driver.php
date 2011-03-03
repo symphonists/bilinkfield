@@ -8,8 +8,8 @@
 		public function about() {
 			return array(
 				'name'			=> 'Field: Bi Link',
-				'version'		=> '1.0.14',
-				'release-date'	=> '2009-09-03',
+				'version'		=> '1.1.0',
+				'release-date'	=> '2011-03-03',
 				'author'		=> array(
 					'name'			=> 'Rowan Lewis',
 					'website'		=> 'http://pixelcarnage.com/',
@@ -46,7 +46,7 @@
 		}
 		
 		public function update($previousVersion) {
-			if (version_compare($previousVersion, '1.0.14', '<')) {
+			if (version_compare($previousVersion, '1.1.0', '<')) {
 				Symphony::Database()->query("
 					ALTER TABLE `tbl_fields_bilink`
 					ADD COLUMN `allow_editing` ENUM('yes','no') DEFAULT 'no';
@@ -64,6 +64,7 @@
 		
 		public function addHeaders($page) {
 			if (!$this->addedHeaders) {
+				$page->addStylesheetToHead(URL . '/extensions/bilinkfield/assets/publish.css', 'screen', 123269781);
 				$page->addScriptToHead(URL . '/extensions/bilinkfield/assets/publish.js', 123269781);
 				
 				$this->addedHeaders = true;

@@ -216,7 +216,7 @@
 			$group->appendChild($label);
 
 		// Column Mode --------------------------------------------------------
-
+			
 			$label = Widget::Label(__('Column Mode'));
 
 			$label->appendChild(Widget::Select(
@@ -231,7 +231,10 @@
 			$wrapper->appendChild($group);
 
 		// Allow Editing -----------------------------------------------------
-
+			
+			$compact = new XMLElement('div');
+			$compact->setAttribute('class', 'compact');
+			
 			$label = Widget::Label();
 			$input = Widget::Input(
 				"fields[{$order}][allow_editing]", 'yes', 'checkbox'
@@ -240,7 +243,7 @@
 			if ($this->get('allow_editing') == 'yes') $input->setAttribute('checked', 'checked');
 
 			$label->setValue($input->generate() . ' ' . __('Allow editing of linked entries'));
-			$wrapper->appendChild($label);
+			$compact->appendChild($label);
 
 		// Allow Multiple -----------------------------------------------------
 
@@ -252,9 +255,11 @@
 			if ($this->get('allow_multiple') == 'yes') $input->setAttribute('checked', 'checked');
 
 			$label->setValue($input->generate() . ' ' . __('Allow selection of multiple options'));
-			$wrapper->appendChild($label);
-			$this->appendShowColumnCheckbox($wrapper);
-			$this->appendRequiredCheckbox($wrapper);
+			$compact->appendChild($label);
+			$this->appendRequiredCheckbox($compact);
+			$this->appendShowColumnCheckbox($compact);
+			
+			$wrapper->appendChild($compact);
 		}
 
 		public function commit() {
@@ -428,7 +433,7 @@
 			}
 
 			else {
-				$label = new XMLElement('h3', $this->get('label'));
+				$label = new XMLElement('p', $this->get('label'));
 				$label->setAttribute('class', 'label');
 				$wrapper->appendChild($label);
 
@@ -584,77 +589,90 @@
 				$field = $fieldManager->fetch($this->get('linked_field_id'));
 				$field_id = $this->get('id');
 				$status = self::__OK__;
-
+				$handled_entries = array();
+				
 				self::$errors[$field_id] = array();
 				self::$entries[$field_id] = array();
-
+				
 				// Create:
 				foreach ($data['entry'] as $index => $entry_data) {
-					$existing_id = (integer)$data['entry_id'][$index];
-
-					if ($existing_id <= 0) {
-						if ($this->_engine->Author) {
-							$author_id = $this->_engine->Author->get('id');
+					$existing_id = null;
+					
+					// Find existing entry:
+					if ((integer)$data['entry_id'][$index] > 0) {
+						$entries = $entryManager->fetch(
+							(integer)$data['entry_id'][$index],
+							$this->get('linked_section_id')
+						);
+						
+						if (isset($entries[0])) {
+							$entry = $entries[0];
+							$existing_id = $entry->get('id');
 						}
-
-						else {
-							$author_id = '1';
-						}
-
+					}
+					
+					// Skip duplicate entries:
+					if ($existing_id != null && in_array($existing_id, $handled_entries)) {
+						continue;
+					}
+					
+					// Create a new entry:
+					if ($existing_id == null) {
 						$entry = $entryManager->create();
 						$entry->set('section_id', $this->get('linked_section_id'));
-						$entry->set('author_id', $author_id);
+						$entry->set('author_id', (
+							isset(Symphony::Engine()->Author)
+								? Symphony::Engine()->Author->get('id')
+								: 1
+						));
 						$entry->set('creation_date', DateTimeObj::get('Y-m-d H:i:s'));
 						$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
 						$entry->assignEntryId();
 					}
-
-					else {
-						$entry = @current($entryManager->fetch($existing_id, $this->get('linked_section_id')));
-					}
-
+					
 					// Append correct linked data:
 					$existing_data = $entry->getData($this->get('linked_field_id'));
 					$existing_entries = array();
-
+					
 					if (isset($existing_data['linked_entry_id'])) {
 						if (!is_array($existing_data['linked_entry_id'])) {
 							$existing_entries[] = $existing_data['linked_entry_id'];
 						}
-
+						
 						else foreach ($existing_data['linked_entry_id'] as $linked_entry_id) {
 							$existing_entries[] = $linked_entry_id;
 						}
 					}
-
+					
 					if (!in_array($entry_id, $existing_entries)) {
 						$existing_entries[] = $entry_id;
 					}
-
+					
 					$entry_data[$field->get('element_name')] = $existing_entries;
-
+					
 					// Validate:
 					if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $errors)) {
 						self::$errors[$field_id][$index] = $errors;
 
 						$status = self::__INVALID_FIELDS__;
 					}
-
+					
 					if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
 						$status = self::__INVALID_FIELDS__;
 					}
-
+					
 					// Cleanup dud entry:
-					if ($existing_id == 0 and $status != self::__OK__) {
+					if ($existing_id == null and $status != self::__OK__) {
 						$existing_id = $entry->get('id');
 						$entry->set('id', 0);
 
 						Symphony::Database()->delete('tbl_entries', " `id` = '$existing_id' ");
 					}
-
+					
 					self::$entries[$field_id][$index] = $entry;
+					$handled_entries[] = $entry->get('id');
 				}
-
+				
 				return $status;
 			}
 
@@ -680,9 +698,9 @@
 					$new_data[] = $entry->get('id');
 				}
 
-				$data = $new_data;
+				$data = array_unique($new_data);
 			}
-
+			
 			if (empty($data)) {
 				return null;
 			}
