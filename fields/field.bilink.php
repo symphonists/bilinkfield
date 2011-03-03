@@ -19,7 +19,7 @@
 
 			$this->_name = 'Bi-Link';
 			$this->_required = true;
-			$this->_driver = $this->_engine->ExtensionManager->create('bilinkfield');
+			$this->_driver = Symphony::ExtensionManager()->create('bilinkfield');
 
 			// Set defaults:
 			$this->set('show_column', 'yes');
@@ -49,7 +49,7 @@
 		}
 
 		public function entryDataCleanup($entry_id, $data = null) {
-			$entryManager = new EntryManager($this->_engine);
+			$entryManager = new EntryManager(Symphony::Engine());
 			$field_id = $this->get('linked_field_id');
 			$entry_ids = Symphony::Database()->fetchCol('linked_entry_id', sprintf(
 				"
@@ -102,7 +102,7 @@
 	-------------------------------------------------------------------------*/
 
 		protected function getFields() {
-			$sectionManager = new SectionManager($this->_engine);
+			$sectionManager = new SectionManager(Symphony::Engine());
 			$section = $sectionManager->fetch($this->get("linked_section_id"));
 
 			if (empty($section)) return null;
@@ -135,7 +135,7 @@
 		}
 
 		public function findOptions() {
-			$sectionManager = new SectionManager($this->_engine);
+			$sectionManager = new SectionManager(Symphony::Engine());
 		  	$sections = $sectionManager->fetch(null, 'ASC', 'name');
 			$groups = $options = array();
 
@@ -311,7 +311,7 @@
 
 			// Update child field:
 			if ($linked_field_id) {
-				$fieldManager = new FieldManager($this->_engine);
+				$fieldManager = new FieldManager(Symphony::Engine());
 				$field = $fieldManager->fetch($linked_field_id);
 
 				if (is_object($field) and $field->get('linked_field_id') != $field_id) {
@@ -334,9 +334,9 @@
 				else $entry_ids = array($entry_ids);
 			}
 
-			$sectionManager = new SectionManager($this->_engine);
+			$sectionManager = new SectionManager(Symphony::Engine());
 			$section = $sectionManager->fetch($this->get('linked_section_id'));
-			$entryManager = new EntryManager($this->_engine);
+			$entryManager = new EntryManager(Symphony::Engine());
 			$count = $entryManager->fetchCount($this->get('linked_section_id'));
 			$entries = $entryManager->fetch(null, $this->get('linked_section_id'), $limit);
 			$options = array(); $entry_ids = array_unique($entry_ids);
@@ -391,7 +391,7 @@
 		}
 
 		public function displayPublishPanel(&$wrapper, $data = null, $error = null, $prefix = null, $postfix = null, $entry_id = null) {
-			$this->_driver->addHeaders($this->_engine->Page);
+			$this->_driver->addHeaders(Symphony::Engine()->Page);
 			$handle = $this->get('element_name'); $entry_ids = array();
 			$field_id = $this->get('id');
 
@@ -447,9 +447,9 @@
 					$ol->setAttribute('class', 'single');
 				}
 
-				$sectionManager = new SectionManager($this->_engine);
+				$sectionManager = new SectionManager(Symphony::Engine());
 				$section = $sectionManager->fetch($this->get('linked_section_id'));
-				$entryManager = new EntryManager($this->_engine);
+				$entryManager = new EntryManager(Symphony::Engine());
 				$possible_entries = $entryManager->fetch(null, $this->get('linked_section_id'), 25);
 				$fields = array(); $first = null;
 
@@ -584,8 +584,8 @@
 
 		public function checkPostFieldData($data, &$error = null, $entry_id = null) {
 			if (isset($data['entry']) and is_array($data['entry'])) {
-				$entryManager = new EntryManager($this->_engine);
-				$fieldManager = new FieldManager($this->_engine);
+				$entryManager = new EntryManager(Symphony::Engine());
+				$fieldManager = new FieldManager(Symphony::Engine());
 				$field = $fieldManager->fetch($this->get('linked_field_id'));
 				$field_id = $this->get('id');
 				$status = self::__OK__;
@@ -729,7 +729,7 @@
 
 			if ($simulate) return $result;
 
-			$entryManager = new EntryManager($this->_engine);
+			$entryManager = new EntryManager(Symphony::Engine());
 
 			// We need to also remove any other entries linking to the selected
 			// if the linked field is single select. This is to maintain any
@@ -907,8 +907,8 @@
 		}
 
 		public function appendFormattedElement(&$wrapper, $data, $encode = false, $mode = null, $entry_id = null) {
-			$sectionManager = new SectionManager($this->_engine);
-			$entryManager = new EntryManager($this->_engine);
+			$sectionManager = new SectionManager(Symphony::Engine());
+			$entryManager = new EntryManager(Symphony::Engine());
 			$linked_section_id = $this->get('linked_section_id');
 			$section = $sectionManager->fetch($linked_section_id);
 			$data = $this->prepareData($data);
@@ -1044,10 +1044,10 @@
 		}
 
 		public function prepareTableValue($data, XMLElement $link = null, $entry_id = null) {
-			$sectionManager = new SectionManager($this->_engine);
+			$sectionManager = new SectionManager(Symphony::Engine());
 			$section = $sectionManager->fetch($this->get('linked_section_id'));
-			$entryManager = new EntryManager($this->_engine);
-			$fieldManager = new FieldManager($this->_engine);
+			$entryManager = new EntryManager(Symphony::Engine());
+			$fieldManager = new FieldManager(Symphony::Engine());
 			$linked = $fieldManager->fetch($this->get('linked_field_id'));
 			$custom_link = null; $more_link = null;
 
