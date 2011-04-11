@@ -8,12 +8,12 @@
 		public function about() {
 			return array(
 				'name'			=> 'Field: Bi Link',
-				'version'		=> '1.1.0',
-				'release-date'	=> '2011-03-03',
+				'version'		=> '1.1.1',
+				'release-date'	=> '2011-04-11',
 				'author'		=> array(
 					'name'			=> 'Rowan Lewis',
-					'website'		=> 'http://pixelcarnage.com/',
-					'email'			=> 'rowan@pixelcarnage.com'
+					'website'		=> 'http://nbsp.io/',
+					'email'			=> 'me@nbsp.io'
 				),
 				'description'	=> 'A bi-directional linking system for Symphony.'
 			);
@@ -33,7 +33,7 @@
 					KEY `field_id` (`field_id`),
 					KEY `linked_section_id` (`linked_section_id`),
 					KEY `linked_field_id` (`linked_field_id`)
-				)
+				) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 			");
 			
 			return true;

@@ -36,7 +36,7 @@
 					PRIMARY KEY (`id`),
 					KEY `entry_id` (`entry_id`),
 					KEY `linked_entry_id` (`linked_entry_id`)
-				)
+				) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 			");
 		}
 		

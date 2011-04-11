@@ -1,7 +1,7 @@
 # Field: Bi-Link
 
 __Version:__ 1.1.0  
-__Author:__ Rowan Lewis <me@rowanlewis.com>  
+__Author:__ Rowan Lewis <me@nbsp.io>  
 __Build Date:__ 3 March 2011  
 __Requirements:__ Symphony 2.2  
 
