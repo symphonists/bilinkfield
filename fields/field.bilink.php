@@ -1138,10 +1138,8 @@
 					)
 				);
 
-				if ($this->get('column_mode') != 'count') {
-					$more_link = $custom_link;
-					$more_link->setValue(__('more →'));
 
+				if ($this->get('column_mode') != 'count') {
 					$custom_link = new XMLElement('span');
 					$custom_link->setAttribute('class', 'inactive');
 					$custom_link->setValue(__('None'));
@@ -1158,9 +1156,9 @@
 				$wrapper = new XMLElement('span');
 				$wrapper->setValue(
 					sprintf(
-						'%s, %s',
+						'%s%s',
 						$custom_link->generate(),
-						$more_link->generate()
+						!is_null($more_link) ? ', ' . $more_link->generate() : ''
 					)
 				);
 
