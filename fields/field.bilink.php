@@ -1,7 +1,7 @@
 <?php
-	
+
 	if (!defined('__IN_SYMPHONY__')) die('<h2>Symphony Error</h2><p>You cannot directly access this file</p>');
-	
+
 	class FieldBiLink extends Field {
 		protected $_driver = null;
 		public $_ignore = array();
@@ -9,25 +9,25 @@
 		static public $errors = array();
 		static public $entries = array();
 		protected $is_fail = true;
-		
+
 	/*-------------------------------------------------------------------------
 		Definition:
 	-------------------------------------------------------------------------*/
-		
+
 		public function __construct(&$parent) {
 			parent::__construct($parent);
-			
+
 			$this->_name = 'Bi-Link';
 			$this->_required = true;
 			$this->_driver = Symphony::ExtensionManager()->create('bilinkfield');
-			
+
 			// Set defaults:
 			$this->set('show_column', 'yes');
 		}
-		
+
 		public function createTable() {
 			$field_id = $this->get('id');
-			
+
 			return Symphony::Database()->query("
 				CREATE TABLE IF NOT EXISTS `tbl_entries_data_{$field_id}` (
 					`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -39,7 +39,7 @@
 				) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 			");
 		}
-		
+
 		public function canFilter() {
 			return true;
 		}
@@ -127,18 +127,18 @@
 	/*-------------------------------------------------------------------------
 		Settings:
 	-------------------------------------------------------------------------*/
-		
+
 		public function findDefaults(&$fields) {
 			if (!isset($fields['allow_editing'])) $fields['allow_editing'] = 'no';
 			if (!isset($fields['allow_multiple'])) $fields['allow_multiple'] = 'yes';
 			if (!isset($fields['column_size'])) $fields['column_size'] = 'medium';
 		}
-		
+
 		public function findOptions() {
 			$sectionManager = new SectionManager(Symphony::Engine());
 		  	$sections = $sectionManager->fetch(null, 'ASC', 'name');
 			$groups = $options = array();
-			
+
 			if (is_array($sections) and !empty($sections)) {
 				foreach ($sections as $section) {
 					$groups[$section->get('id')] = array(
@@ -147,14 +147,14 @@
 					);
 				}
 			}
-			
+
 			$options[] = array('', '', __('None'));
-			
+
 			foreach ($groups as $group) {
 				if (!is_array($group['fields'])) continue;
-				
+
 				$fields = array();
-				
+
 				foreach ($group['fields'] as $field) {
 					if ($field->get('id') != $this->get('id')) {
 						$selected = $this->get('linked_field_id') == $field->get('id');
@@ -163,18 +163,18 @@
 						);
 					}
 				}
-				
+
 				if (empty($fields)) continue;
-				
+
 				$options[] = array(
 					'label'		=> $group['section'],
 					'options'	=> $fields
 				);
 			}
-			
+
 			return $options;
 		}
-		
+
 		public function findModes() {
 			$modes = array(
 				array('count', false, 'Entry Count'),
@@ -213,7 +213,7 @@
 			$group->appendChild($label);
 
 		// Column Mode --------------------------------------------------------
-			
+
 			$label = Widget::Label(__('Column Mode'));
 
 			$label->appendChild(Widget::Select(
@@ -228,10 +228,10 @@
 			$wrapper->appendChild($group);
 
 		// Allow Editing -----------------------------------------------------
-			
+
 			$compact = new XMLElement('div');
 			$compact->setAttribute('class', 'compact');
-			
+
 			$label = Widget::Label();
 			$input = Widget::Input(
 				"fields[{$order}][allow_editing]", 'yes', 'checkbox'
@@ -255,7 +255,7 @@
 			$compact->appendChild($label);
 			$this->appendRequiredCheckbox($compact);
 			$this->appendShowColumnCheckbox($compact);
-			
+
 			$wrapper->appendChild($compact);
 		}
 
@@ -466,16 +466,16 @@
 				else if ($entry_ids) {
 					$linked_entries = $entryManager->fetch($entry_ids, $this->get('linked_section_id'));
 					$sorted_entries = array();
-					
+
 					if ($linked_entries) {
 						foreach ($linked_entries as $index => $entry) {
 							unset($linked_entries[$index]);
 							$sorted_entries[$entry->get('id')] = $entry;
 						}
-						
+
 						foreach ($entry_ids as $order => $linked_entry) {
 							if (!isset($sorted_entries[$linked_entry])) continue;
-							
+
 							$entry = $sorted_entries[$linked_entry];
 							$this->displayItem($ol, __('None'), $order, $entry, $first, $fields, $prefix, $postfix);
 						}
@@ -587,32 +587,32 @@
 				$field_id = $this->get('id');
 				$status = self::__OK__;
 				$handled_entries = array();
-				
+
 				self::$errors[$field_id] = array();
 				self::$entries[$field_id] = array();
-				
+
 				// Create:
 				foreach ($data['entry'] as $index => $entry_data) {
 					$existing_id = null;
-					
+
 					// Find existing entry:
 					if ((integer)$data['entry_id'][$index] > 0) {
 						$entries = $entryManager->fetch(
 							(integer)$data['entry_id'][$index],
 							$this->get('linked_section_id')
 						);
-						
+
 						if (isset($entries[0])) {
 							$entry = $entries[0];
 							$existing_id = $entry->get('id');
 						}
 					}
-					
+
 					// Skip duplicate entries:
 					if ($existing_id != null && in_array($existing_id, $handled_entries)) {
 						continue;
 					}
-					
+
 					// Create a new entry:
 					if ($existing_id == null) {
 						$entry = $entryManager->create();
@@ -626,38 +626,38 @@
 						$entry->set('creation_date_gmt', DateTimeObj::getGMT('Y-m-d H:i:s'));
 						$entry->assignEntryId();
 					}
-					
+
 					// Append correct linked data:
 					$existing_data = $entry->getData($this->get('linked_field_id'));
 					$existing_entries = array();
-					
+
 					if (isset($existing_data['linked_entry_id'])) {
 						if (!is_array($existing_data['linked_entry_id'])) {
 							$existing_entries[] = $existing_data['linked_entry_id'];
 						}
-						
+
 						else foreach ($existing_data['linked_entry_id'] as $linked_entry_id) {
 							$existing_entries[] = $linked_entry_id;
 						}
 					}
-					
+
 					if (!in_array($entry_id, $existing_entries)) {
 						$existing_entries[] = $entry_id;
 					}
-					
+
 					$entry_data[$field->get('element_name')] = $existing_entries;
-					
+
 					// Validate:
 					if (__ENTRY_FIELD_ERROR__ == $entry->checkPostData($entry_data, $errors)) {
 						self::$errors[$field_id][$index] = $errors;
 
 						$status = self::__INVALID_FIELDS__;
 					}
-					
+
 					if (__ENTRY_OK__ != $entry->setDataFromPost($entry_data, $error)) {
 						$status = self::__INVALID_FIELDS__;
 					}
-					
+
 					// Cleanup dud entry:
 					if ($existing_id == null and $status != self::__OK__) {
 						$existing_id = $entry->get('id');
@@ -665,11 +665,11 @@
 
 						Symphony::Database()->delete('tbl_entries', " `id` = '$existing_id' ");
 					}
-					
+
 					self::$entries[$field_id][$index] = $entry;
 					$handled_entries[] = $entry->get('id');
 				}
-				
+
 				return $status;
 			}
 
@@ -697,7 +697,7 @@
 
 				$data = array_unique($new_data);
 			}
-			
+
 			if (empty($data)) {
 				return null;
 			}
@@ -944,16 +944,16 @@
 					)
 				));
 				$field = @current($section->fetchVisibleColumns());
-				
+
 				$sorted_entries = array();
-				
+
 				foreach ($entries as $index => $entry) {
 					unset($entries[$index]);
 					$sorted_entries[$entry->get('id')] = $entry;
 				}
-				
+
 				$entries = $sorted_entries;
-				
+
 				foreach ($entry_ids as $order => $entry) {
 					if (!isset($entries[$entry]) or empty($entries[$entry])) continue;
 
@@ -988,16 +988,16 @@
 						'handle'	=> $section->get('handle')
 					)
 				));
-				
+
 				$sorted_entries = array();
-				
+
 				foreach ($entries as $index => $entry) {
 					unset($entries[$index]);
 					$sorted_entries[$entry->get('id')] = $entry;
 				}
-				
+
 				$entries = $sorted_entries;
-				
+
 				foreach ($entry_ids as $order => $entry) {
 					if (!isset($entries[$entry]) or empty($entries[$entry])) continue;
 
@@ -1041,11 +1041,9 @@
 		}
 
 		public function prepareTableValue($data, XMLElement $link = null, $entry_id = null) {
-			$sectionManager = new SectionManager(Symphony::Engine());
-			$section = $sectionManager->fetch($this->get('linked_section_id'));
 			$entryManager = new EntryManager(Symphony::Engine());
-			$fieldManager = new FieldManager(Symphony::Engine());
-			$linked = $fieldManager->fetch($this->get('linked_field_id'));
+			$section = $entryManager->sectionManager->fetch($this->get('linked_section_id'));
+			$linked = $entryManager->fieldManager->fetch($this->get('linked_field_id'));
 			$custom_link = null; $more_link = null;
 
 			// Not setup correctly:
@@ -1062,12 +1060,12 @@
 						if ($this->get('column_mode') == 'last-item') {
 							$data['linked_entry_id'] = array_reverse($data['linked_entry_id']);
 						}
-						
+
 						$entries = $entryManager->fetch(
 							current($data['linked_entry_id']),
 							$this->get('linked_section_id'), 1
 						);
-						
+
 						if (is_array($entries) and !empty($entries)) {
 							$entry = current($entries);
 							$value = $field->prepareTableValue(
@@ -1083,13 +1081,13 @@
 									$entry->get('id')
 								)
 							);
-							
+
 							if ($value instanceof XMLElement) {
 								$value = $value->generate();
 							}
-							
+
 							$custom_link->setValue(strip_tags($value));
-							
+
 							$more_link = new XMLElement('a');
 							$more_link->setValue(__('more →'));
 							$more_link->setAttribute(
@@ -1103,14 +1101,14 @@
 							);
 						}
 					}
-					
+
 					else {
 						$joins = null; $where = null;
-						
+
 						$linked->buildDSRetrivalSQL(array($entry_id), $joins, $where, false);
-						
+
 						$count = $entryManager->fetchCount($this->get('linked_section_id'), $where, $joins);
-						
+
 						if ($count > 0) {
 							$custom_link = new XMLElement('a');
 							$custom_link->setValue($count . __(' →'));
@@ -1126,7 +1124,7 @@
 					}
 				}
 			}
-			
+
 			if (is_null($custom_link)) {
 				$custom_link = new XMLElement('a');
 				$custom_link->setValue(__('0 →'));
@@ -1139,7 +1137,7 @@
 						$entry_id
 					)
 				);
-				
+
 				if ($this->get('column_mode') != 'count') {
 					$more_link = $custom_link;
 					$more_link->setValue(__('more →'));
@@ -1149,26 +1147,26 @@
 					$custom_link->setValue(__('None'));
 				}
 			}
-			
+
 			if ($link) {
 				$link->setValue($custom_link->getValue());
-				
+
 				return $link->generate();
 			}
-			
+
 			if ($this->get('column_mode') != 'count') {
 				$wrapper = new XMLElement('span');
 				$wrapper->setValue(
 					sprintf(
-						'%s, %s',
+						'%s, %s',
 						$custom_link->generate(),
 						$more_link->generate()
 					)
 				);
-				
-				return $wrapper;
+
+				return is_null($link) ? $wrapper->generate() : $wrapper;
 			}
-			
+
 			return $custom_link;
 		}
 
