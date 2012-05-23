@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension id="bilinkfield" status="released" xmlns="http://symphony-cms.com/schemas/extension/1.0">
+	<name>Bi-Link Field</name>
+	<description>A better way to link entries</description>
+	<repo type="github">https://github.com/symphonists/bilinkfield</repo>
+	<url type="discuss">http://symphony-cms.com/discuss/thread/792/</url>
+	<types>
+		<type>Field Types</type>
+	</types>
+	<authors>
+		<author>
+			<name github="symphonists" symphony="community">Symphony Community</name>
+		</author>
+		<author>
+			<name github="rowan-lewis" symphony="buzzomatic">Rowan Lewis</name>
+			<website>http://nbsp.io/</website>
+		</author>
+	</authors>
+	<releases>
+		<release version="1.1.1" date="2011-04-11" min="2.2" />
+	</releases>
+</extension>
